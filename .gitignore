@@ -1,0 +1,10 @@
+# Build directories
+target*/
+/target*/
+
+# Database and temporary files
+*.bak
+*.del
+
+# Dependencies and locks
+Cargo.lock
