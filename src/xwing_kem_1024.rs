@@ -6,6 +6,8 @@ use libcrux_ml_kem::mlkem1024::{
     MlKem1024PublicKey,
 };
 
+use rand_core;
+use rand_core::RngCore;
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
@@ -44,13 +46,10 @@ impl EncapsulationKey {
         buffer
     }
 
-    pub fn encapsulate<R: rand_core::RngCore + rand_core::CryptoRng>(
-        &self,
-        rng: &mut R,
-    ) -> (Ciphertext, SharedSecret) {
-        let pk_m = MlKem1024PublicKey::from(self.pk_m);
+    pub fn encapsulate(&self) -> (Ciphertext, SharedSecret) {
+        let pk_m = MlKem1024PublicKey::from(*self.pk_m());
         let mut ml_rand = [0u8; 32];
-        rng.fill_bytes(&mut ml_rand);
+        rand_core::OsRng.fill_bytes(&mut ml_rand);
         let (ct_m, mut ss_m) = encapsulate(&pk_m, ml_rand);
 
         let ct_m_bytes: [u8; XWING1024_CT_SIZE] = ct_m
@@ -60,12 +59,12 @@ impl EncapsulationKey {
 
         ml_rand.zeroize();
 
-        let ephemeral = EphemeralSecret::random_from_rng(rng);
+        let ephemeral = EphemeralSecret::random_from_rng(rand_core::OsRng);
         let ct_x = PublicKey::from(&ephemeral);
-        let mut ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
+        let mut ss_x = ephemeral.diffie_hellman(self.pk_x()).to_bytes();
 
         let ct_x_bytes = ct_x.to_bytes();
-        let pk_x_bytes = self.pk_x.to_bytes();
+        let pk_x_bytes = self.pk_x().to_bytes();
         let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
 
         ss_m.zeroize();
@@ -78,6 +77,31 @@ impl EncapsulationKey {
             },
             ss,
         )
+    }
+
+    /// Public getter for pk_m
+    pub fn pk_m(&self) -> &[u8; PK_SIZE] {
+        &self.pk_m
+    }
+
+    /// Public getter for pk_x
+    pub fn pk_x(&self) -> &PublicKey {
+        &self.pk_x
+    }
+
+    /// Deterministic generation from 32-byte seed
+    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
+        let (kp, x_bytes) = expand_seed(seed);
+        let pk_m_bytes: [u8; PK_SIZE] = kp
+            .public_key()
+            .as_ref()
+            .try_into()
+            .expect("ML-KEM public key size mismatch");
+
+        let sk_x = StaticSecret::from(x_bytes);
+        let pk_x = PublicKey::from(&sk_x);
+
+        Self::from_components(pk_m_bytes, pk_x)
     }
 }
 
@@ -126,17 +150,15 @@ impl DecapsulationKey {
     pub fn decapsulate(&self, ct: &Ciphertext) -> SharedSecret {
         let (kp, x_bytes) = expand_seed(&self.seed);
 
-        // kp.private_key() returns &MlKem1024PrivateKey
         let sk_m = kp.private_key();
-        let ct_m = MlKem1024Ciphertext::from(ct.ct_m);
-        // No extra & on sk_m – it's already a reference
+        let ct_m = MlKem1024Ciphertext::from(*ct.ct_m());
         let mut ss_m = decapsulate(sk_m, &ct_m);
 
         let sk_x = StaticSecret::from(x_bytes);
-        let mut ss_x = sk_x.diffie_hellman(&ct.ct_x).to_bytes();
+        let mut ss_x = sk_x.diffie_hellman(ct.ct_x()).to_bytes();
 
         let pk_x = PublicKey::from(&sk_x);
-        let ct_x_bytes = ct.ct_x.to_bytes();
+        let ct_x_bytes = ct.ct_x().to_bytes();
         let pk_x_bytes = pk_x.to_bytes();
 
         let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
@@ -145,6 +167,11 @@ impl DecapsulationKey {
         ss_x.zeroize();
 
         ss
+    }
+
+    /// Deterministic generation from 32-byte seed
+    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
+        Self { seed: *seed }
     }
 }
 
@@ -165,6 +192,22 @@ impl From<&[u8; CIPHERTEXT_SIZE]> for Ciphertext {
         let ct_x_bytes: [u8; 32] = bytes[XWING1024_CT_SIZE..].try_into().unwrap();
         let ct_x = PublicKey::from(ct_x_bytes);
         Self { ct_m, ct_x }
+    }
+}
+
+impl Ciphertext {
+    pub fn from_components(ct_m: [u8; XWING1024_CT_SIZE], ct_x: PublicKey) -> Self {
+        Self { ct_m, ct_x }
+    }
+
+    /// Public getter for ct_m
+    pub fn ct_m(&self) -> &[u8; XWING1024_CT_SIZE] {
+        &self.ct_m
+    }
+
+    /// Public getter for ct_x
+    pub fn ct_x(&self) -> &x25519_dalek::PublicKey {
+        &self.ct_x
     }
 }
 

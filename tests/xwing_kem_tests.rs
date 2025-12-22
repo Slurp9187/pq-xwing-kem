@@ -92,7 +92,7 @@ mod xwing_kem_1024_tests {
         let mut rng = OsRng;
         let (sk, pk) = generate_keypair(&mut rng);
 
-        let (ct, ss_encap) = pk.encapsulate(&mut rng);
+        let (ct, ss_encap) = pk.encapsulate();
         let ss_decap = sk.decapsulate(&ct);
 
         assert_eq!(ss_encap, ss_decap);
@@ -115,7 +115,7 @@ mod xwing_kem_1024_tests {
         let mut rng = OsRng;
         let (_sk, pk) = generate_keypair(&mut rng);
 
-        let (ct, _) = pk.encapsulate(&mut rng);
+        let (ct, _) = pk.encapsulate();
         let ct_bytes = ct.to_bytes();
         let ct_restored = Ciphertext::from(&ct_bytes);
 
@@ -128,8 +128,8 @@ mod xwing_kem_1024_tests {
         let (_sk1, pk1) = generate_keypair(&mut rng);
         let (_sk2, pk2) = generate_keypair(&mut rng);
 
-        let (ct1, ss1) = pk1.encapsulate(&mut rng);
-        let (ct2, ss2) = pk2.encapsulate(&mut rng);
+        let (ct1, ss1) = pk1.encapsulate();
+        let (ct2, ss2) = pk2.encapsulate();
 
         assert_ne!(ss1, ss2);
         assert_ne!(ct1, ct2);
@@ -141,7 +141,7 @@ mod xwing_kem_1024_tests {
         let (_sk1, pk1) = generate_keypair(&mut rng);
         let (sk2, _pk2) = generate_keypair(&mut rng);
 
-        let (ct, ss_encap) = pk1.encapsulate(&mut rng);
+        let (ct, ss_encap) = pk1.encapsulate();
         let ss_decap = sk2.decapsulate(&ct);
 
         // Since it's hybrid, and ML-KEM decapsulates to random if wrong key,
@@ -153,7 +153,7 @@ mod xwing_kem_1024_tests {
     fn test_encapsulation_non_zero_ciphertext() {
         let mut rng = OsRng;
         let (_, pk) = generate_keypair(&mut rng);
-        let (ct, _) = pk.encapsulate(&mut rng);
+        let (ct, _) = pk.encapsulate();
         // Ensure CT is not all zeros
         assert!(!ct.to_bytes().iter().all(|&b| b == 0));
     }
@@ -162,7 +162,7 @@ mod xwing_kem_1024_tests {
     fn test_decapsulation_modified_ciphertext_fails() {
         let mut rng = OsRng;
         let (sk, pk) = generate_keypair(&mut rng);
-        let (ct, ss_encap) = pk.encapsulate(&mut rng);
+        let (ct, ss_encap) = pk.encapsulate();
         // Modify the CT
         let mut modified_bytes = ct.to_bytes();
         modified_bytes[0] ^= 1; // Flip a bit
@@ -176,7 +176,7 @@ mod xwing_kem_1024_tests {
     fn test_ciphertext_size() {
         let mut rng = OsRng;
         let (_, pk) = generate_keypair(&mut rng);
-        let (ct, _) = pk.encapsulate(&mut rng);
+        let (ct, _) = pk.encapsulate();
         assert_eq!(ct.to_bytes().len(), CIPHERTEXT_SIZE);
     }
 }

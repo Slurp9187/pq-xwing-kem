@@ -26,6 +26,8 @@ pub mod xwing_kem_512;
 pub mod xwing_kem_768;
 
 pub(crate) use combiner::combiner;
+pub use xwing_kem_1024::*;
+pub use xwing_kem_512::*;
 pub use xwing_kem_768::*;
 
 pub const XWING_DRAFT_VERSION: &str = "09";
