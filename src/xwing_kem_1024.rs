@@ -16,9 +16,9 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 const PK_SIZE: usize = 1568;
 pub const XWING1024_CT_SIZE: usize = 1568;
 
-pub const ENCAPSULATION_KEY_SIZE: usize = PK_SIZE + X25519_KEY_SIZE;
-pub const DECAPSULATION_KEY_SIZE: usize = X25519_KEY_SIZE;
-pub const CIPHERTEXT_SIZE: usize = XWING1024_CT_SIZE + X25519_KEY_SIZE;
+pub const XWING1024_ENCAPSULATION_KEY_SIZE: usize = PK_SIZE + X25519_KEY_SIZE;
+pub const XWING1024_DECAPSULATION_KEY_SIZE: usize = X25519_KEY_SIZE;
+pub const XWING1024_CIPHERTEXT_SIZE: usize = XWING1024_CT_SIZE + X25519_KEY_SIZE;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct EncapsulationKey {
@@ -39,8 +39,8 @@ pub struct Ciphertext {
 
 impl EncapsulationKey {
     #[must_use]
-    pub fn to_bytes(&self) -> [u8; ENCAPSULATION_KEY_SIZE] {
-        let mut buffer = [0u8; ENCAPSULATION_KEY_SIZE];
+    pub fn to_bytes(&self) -> [u8; XWING1024_ENCAPSULATION_KEY_SIZE] {
+        let mut buffer = [0u8; XWING1024_ENCAPSULATION_KEY_SIZE];
         buffer[..PK_SIZE].copy_from_slice(&self.pk_m);
         buffer[PK_SIZE..].copy_from_slice(&self.pk_x.to_bytes());
         buffer
@@ -105,8 +105,8 @@ impl EncapsulationKey {
     }
 }
 
-impl From<&[u8; ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
-    fn from(bytes: &[u8; ENCAPSULATION_KEY_SIZE]) -> Self {
+impl From<&[u8; XWING1024_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+    fn from(bytes: &[u8; XWING1024_ENCAPSULATION_KEY_SIZE]) -> Self {
         let mut pk_m = [0u8; PK_SIZE];
         pk_m.copy_from_slice(&bytes[..PK_SIZE]);
         let pk_x_bytes: [u8; 32] = bytes[PK_SIZE..].try_into().unwrap();
@@ -177,16 +177,16 @@ impl DecapsulationKey {
 
 impl Ciphertext {
     #[must_use]
-    pub fn to_bytes(&self) -> [u8; CIPHERTEXT_SIZE] {
-        let mut buffer = [0u8; CIPHERTEXT_SIZE];
+    pub fn to_bytes(&self) -> [u8; XWING1024_CIPHERTEXT_SIZE] {
+        let mut buffer = [0u8; XWING1024_CIPHERTEXT_SIZE];
         buffer[..XWING1024_CT_SIZE].copy_from_slice(&self.ct_m);
         buffer[XWING1024_CT_SIZE..].copy_from_slice(&self.ct_x.to_bytes());
         buffer
     }
 }
 
-impl From<&[u8; CIPHERTEXT_SIZE]> for Ciphertext {
-    fn from(bytes: &[u8; CIPHERTEXT_SIZE]) -> Self {
+impl From<&[u8; XWING1024_CIPHERTEXT_SIZE]> for Ciphertext {
+    fn from(bytes: &[u8; XWING1024_CIPHERTEXT_SIZE]) -> Self {
         let mut ct_m = [0u8; XWING1024_CT_SIZE];
         ct_m.copy_from_slice(&bytes[..XWING1024_CT_SIZE]);
         let ct_x_bytes: [u8; 32] = bytes[XWING1024_CT_SIZE..].try_into().unwrap();
@@ -211,7 +211,7 @@ impl Ciphertext {
     }
 }
 
-pub fn generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
+pub fn xwing1024_generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
     rng: &mut R,
 ) -> (DecapsulationKey, EncapsulationKey) {
     let sk = DecapsulationKey::generate(rng);

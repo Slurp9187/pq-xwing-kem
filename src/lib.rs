@@ -26,9 +26,18 @@ pub mod xwing_kem_512;
 pub mod xwing_kem_768;
 
 pub(crate) use combiner::combiner;
-pub use xwing_kem_1024::*;
-pub use xwing_kem_512::*;
-pub use xwing_kem_768::*;
+pub use xwing_kem_1024::{
+    xwing1024_generate_keypair, XWING1024_CIPHERTEXT_SIZE, XWING1024_DECAPSULATION_KEY_SIZE,
+    XWING1024_ENCAPSULATION_KEY_SIZE,
+};
+pub use xwing_kem_512::{
+    xwing512_generate_keypair, XWING512_CIPHERTEXT_SIZE, XWING512_DECAPSULATION_KEY_SIZE,
+    XWING512_ENCAPSULATION_KEY_SIZE,
+};
+pub use xwing_kem_768::{
+    xwing768_generate_keypair, XWING768_CIPHERTEXT_SIZE, XWING768_DECAPSULATION_KEY_SIZE,
+    XWING768_ENCAPSULATION_KEY_SIZE,
+};
 
 pub const XWING_DRAFT_VERSION: &str = "09";
 
