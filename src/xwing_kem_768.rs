@@ -9,7 +9,7 @@ use libcrux_ml_kem::mlkem768::{
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
-use zeroize::ZeroizeOnDrop;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 const PK_SIZE: usize = 1184;
 pub const XWING768_CT_SIZE: usize = 1088;
@@ -51,20 +51,25 @@ impl EncapsulationKey {
         let pk_m = MlKem768PublicKey::from(self.pk_m);
         let mut ml_rand = [0u8; 32];
         rng.fill_bytes(&mut ml_rand);
-        let (ct_m, ss_m) = encapsulate(&pk_m, ml_rand);
+        let (ct_m, mut ss_m) = encapsulate(&pk_m, ml_rand);
 
         let ct_m_bytes: [u8; XWING768_CT_SIZE] = ct_m
             .as_ref()
             .try_into()
             .expect("ML-KEM ciphertext size mismatch");
 
+        ml_rand.zeroize();
+
         let ephemeral = EphemeralSecret::random_from_rng(rng);
         let ct_x = PublicKey::from(&ephemeral);
-        let ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
+        let mut ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
 
         let ct_x_bytes = ct_x.to_bytes();
         let pk_x_bytes = self.pk_x.to_bytes();
         let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
+
+        ss_m.zeroize();
+        ss_x.zeroize();
 
         (
             Ciphertext {
@@ -119,19 +124,23 @@ impl DecapsulationKey {
         let sk_m = kp.private_key();
         let ct_m = MlKem768Ciphertext::from(ct.ct_m);
         // No extra & on sk_m – it's already a reference
-        let ss_m = decapsulate(sk_m, &ct_m);
+        let mut ss_m = decapsulate(sk_m, &ct_m);
 
         let sk_x = StaticSecret::from(x_bytes);
-        let ss_x = sk_x.diffie_hellman(&ct.ct_x).to_bytes();
+        let mut ss_x = sk_x.diffie_hellman(&ct.ct_x).to_bytes();
 
         let pk_x = PublicKey::from(&sk_x);
         let ct_x_bytes = ct.ct_x.to_bytes();
         let pk_x_bytes = pk_x.to_bytes();
 
-        combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes)
+        let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
+
+        ss_m.zeroize();
+        ss_x.zeroize();
+
+        ss
     }
 }
-
 impl Ciphertext {
     #[must_use]
     pub fn to_bytes(&self) -> [u8; CIPHERTEXT_SIZE] {
@@ -174,10 +183,13 @@ fn expand_seed(seed: &[u8; MASTER_SEED_SIZE]) -> (MlKem768KeyPair, [u8; 32]) {
     let mut ml_seed = [0u8; 64];
     ml_seed.copy_from_slice(&expanded[..64]);
     let kp = generate_key_pair(ml_seed);
+    ml_seed.zeroize();
 
     // Draft-09: sk_X = expanded[64:96]
     let mut x_bytes = [0u8; 32];
     x_bytes.copy_from_slice(&expanded[64..]);
+
+    expanded.zeroize();
 
     (kp, x_bytes)
 }
