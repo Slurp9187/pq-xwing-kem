@@ -1,0 +1,105 @@
+   Compiling xwing-kem v0.1.0 (C:\Users\chadm\Projects\xwing-kem)
+error: unknown start of token: `
+ --> src\aliases.rs:3:1
+  |
+3 | ```
+  | ^^^
+  |
+  = note: character appears 2 more times
+help: Unicode character '`' (Grave Accent) looks like ''' (Single Quote), but it is not
+  |
+3 - ```
+3 + '''
+  |
+
+error: unknown start of token: \
+  --> src\aliases.rs:24:26
+   |
+24 | The warnings are from src\aliases.rs.
+   |                          ^
+
+error: prefix `I` is unknown
+  --> src\aliases.rs:34:5
+   |
+34 | So, I'll make it an empty file.```#![allow(unused_imports)]
+   |     ^ unknown prefix
+   |
+   = note: prefixed identifiers and literals are reserved since Rust 2021
+help: consider inserting whitespace here
+   |
+34 | So, I 'll make it an empty file.```#![allow(unused_imports)]
+   |      +
+
+error: unknown start of token: `
+  --> src\aliases.rs:34:32
+   |
+34 | So, I'll make it an empty file.```#![allow(unused_imports)]
+   |                                ^^^
+   |
+   = note: character appears 2 more times
+help: Unicode character '`' (Grave Accent) looks like ''' (Single Quote), but it is not
+   |
+34 - So, I'll make it an empty file.```#![allow(unused_imports)]
+34 + So, I'll make it an empty file.'''#![allow(unused_imports)]
+   |
+
+error: unknown start of token: `
+  --> src\aliases.rs:46:47
+   |
+46 | The file is from scratch, so just remove them.```//! Aliases for cryptographic types used in the vault.
+   |                                               ^^^
+   |
+   = note: character appears 2 more times
+help: Unicode character '`' (Grave Accent) looks like ''' (Single Quote), but it is not
+   |
+46 - The file is from scratch, so just remove them.```//! Aliases for cryptographic types used in the vault.
+46 + The file is from scratch, so just remove them.'''//! Aliases for cryptographic types used in the vault.
+   |
+
+error: unknown start of token: `
+  --> src\aliases.rs:51:1
+   |
+51 | ```
+   | ^^^
+   |
+   = note: character appears 2 more times
+help: Unicode character '`' (Grave Accent) looks like ''' (Single Quote), but it is not
+   |
+51 - ```
+51 + '''
+   |
+
+error: prefix `it` is unknown
+  --> src\aliases.rs:59:25
+   |
+59 | For the response, since it's from scratch, and to fix warnings, make it:
+   |                         ^^ unknown prefix
+   |
+   = note: prefixed identifiers and literals are reserved since Rust 2021
+help: consider inserting whitespace here
+   |
+59 | For the response, since it 's from scratch, and to fix warnings, make it:
+   |                           +
+
+error: unknown start of token: `
+  --> src\aliases.rs:63:15
+   |
+63 | I think empty.```
+   |               ^^^
+   |
+   = note: character appears 2 more times
+help: Unicode character '`' (Grave Accent) looks like ''' (Single Quote), but it is not
+   |
+63 - I think empty.```
+63 + I think empty.'''
+   |
+
+error: expected one of `!` or `::`, found `,`
+ --> src\aliases.rs:4:3
+  |
+4 | No, the edit description is to remove unused imports, so just an empty file.
+  |   ^ expected one of `!` or `::`
+
+error: could not compile `xwing-kem` (lib test) due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `xwing-kem` (lib) due to 9 previous errors

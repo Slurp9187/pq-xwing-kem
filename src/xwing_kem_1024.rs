@@ -1,11 +1,11 @@
 // src/crypto/xwing_kem/xwing_kem_1024.rs
 
-use super::{combiner, SharedSecret, MASTER_SEED_SIZE};
+use super::{combiner, consts::X25519_KEY_SIZE, SharedSecret, MASTER_SEED_SIZE};
 use libcrux_ml_kem::mlkem1024::{
     decapsulate, encapsulate, generate_key_pair, MlKem1024Ciphertext, MlKem1024KeyPair,
     MlKem1024PublicKey,
 };
-use rand_core::{CryptoRng, RngCore};
+
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
@@ -14,11 +14,11 @@ use zeroize::ZeroizeOnDrop;
 const PK_SIZE: usize = 1568;
 pub const XWING1024_CT_SIZE: usize = 1568;
 
-pub const ENCAPSULATION_KEY_SIZE: usize = PK_SIZE + 32;
-pub const DECAPSULATION_KEY_SIZE: usize = 32;
-pub const CIPHERTEXT_SIZE: usize = XWING1024_CT_SIZE + 32;
+pub const ENCAPSULATION_KEY_SIZE: usize = PK_SIZE + X25519_KEY_SIZE;
+pub const DECAPSULATION_KEY_SIZE: usize = X25519_KEY_SIZE;
+pub const CIPHERTEXT_SIZE: usize = XWING1024_CT_SIZE + X25519_KEY_SIZE;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EncapsulationKey {
     pk_m: [u8; PK_SIZE],
     pk_x: PublicKey,
@@ -29,7 +29,7 @@ pub struct DecapsulationKey {
     seed: [u8; MASTER_SEED_SIZE],
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ciphertext {
     ct_m: [u8; XWING1024_CT_SIZE],
     ct_x: PublicKey,
@@ -44,7 +44,10 @@ impl EncapsulationKey {
         buffer
     }
 
-    pub fn encapsulate<R: CryptoRng + RngCore>(&self, rng: &mut R) -> (Ciphertext, SharedSecret) {
+    pub fn encapsulate<R: rand_core::RngCore + rand_core::CryptoRng>(
+        &self,
+        rng: &mut R,
+    ) -> (Ciphertext, SharedSecret) {
         let pk_m = MlKem1024PublicKey::from(self.pk_m);
         let mut ml_rand = [0u8; 32];
         rng.fill_bytes(&mut ml_rand);
@@ -90,7 +93,7 @@ impl EncapsulationKey {
 }
 
 impl DecapsulationKey {
-    pub fn generate<R: CryptoRng + RngCore>(rng: &mut R) -> Self {
+    pub fn generate<R: rand_core::RngCore + rand_core::CryptoRng>(rng: &mut R) -> Self {
         let mut seed = [0u8; MASTER_SEED_SIZE];
         rng.fill_bytes(&mut seed);
         Self { seed }
@@ -155,7 +158,7 @@ impl From<&[u8; CIPHERTEXT_SIZE]> for Ciphertext {
     }
 }
 
-pub fn generate_keypair<R: CryptoRng + RngCore>(
+pub fn generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
     rng: &mut R,
 ) -> (DecapsulationKey, EncapsulationKey) {
     let sk = DecapsulationKey::generate(rng);

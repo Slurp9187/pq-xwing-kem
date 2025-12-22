@@ -8,7 +8,7 @@ pub(crate) const X_WING_LABEL: &[u8] = br"\.//^\";
 /// This follows the X-Wing KEM specification to derive a hybrid post-quantum/classical shared secret.
 /// Inputs: ML-KEM shared secret (ss_m), X25519 DH shared secret (ss_x), X25519 ephemeral public key (ct_x), and X25519 static public key (pk_x).
 /// The domain separator label is appended to ensure uniqueness and prevent cross-protocol attacks.
-pub(crate) fn combiner(
+pub fn combiner(
     // ss_m: Shared secret from ML-KEM (post-quantum KEM). This is the output of ML-KEM decapsulation (for recipient) or encapsulation (for sender), a 32-byte symmetric key derived from lattice-based cryptography. It provides the main post-quantum security for the hybrid scheme.
     ss_m: &[u8; 32],
     // ss_x: Shared secret from X25519 Diffie-Hellman key exchange. This is the result of the ephemeral-static DH computation (ephemeral_key * static_public_key), a 32-byte value that adds classical ECDH security to mitigate ML-KEM weaknesses.

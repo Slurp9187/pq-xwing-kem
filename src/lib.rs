@@ -18,7 +18,10 @@
 
 extern crate alloc;
 
-mod combiner;
+pub mod aliases;
+pub mod combiner;
+pub mod consts;
+pub mod error;
 pub mod xwing_kem_1024;
 pub mod xwing_kem_512;
 pub mod xwing_kem_768;
@@ -28,7 +31,6 @@ pub use xwing_kem_768::*;
 
 pub const XWING_DRAFT_VERSION: &str = "09";
 
-pub const MASTER_SEED_SIZE: usize = 32;
-pub const SHARED_SECRET_SIZE: usize = 32;
+pub use consts::{MASTER_SEED_SIZE, SHARED_SECRET_SIZE};
 
 pub type SharedSecret = [u8; SHARED_SECRET_SIZE];
