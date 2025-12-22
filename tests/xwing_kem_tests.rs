@@ -61,6 +61,18 @@ mod combiner_tests {
 
         assert_ne!(plain_hash.as_slice(), combined.as_slice());
     }
+
+    #[test]
+    fn test_combiner_all_zero_inputs() {
+        let ss_m = [0u8; 32];
+        let ss_x = [0u8; 32];
+        let ct_x = [0u8; 32];
+        let pk_x = [0u8; 32];
+        let result = combiner_fn(&ss_m, &ss_x, &ct_x, &pk_x);
+        // Should still produce a non-zero hash due to the label
+        assert!(!result.iter().all(|&b| b == 0));
+        assert_eq!(result.len(), SHARED_SECRET_SIZE);
+    }
 }
 
 #[cfg(test)]
@@ -135,6 +147,37 @@ mod xwing_kem_1024_tests {
         // Since it's hybrid, and ML-KEM decapsulates to random if wrong key,
         // but X25519 will give different ss_x, so overall different secret.
         assert_ne!(ss_encap, ss_decap);
+    }
+
+    #[test]
+    fn test_encapsulation_non_zero_ciphertext() {
+        let mut rng = OsRng;
+        let (_, pk) = generate_keypair(&mut rng);
+        let (ct, _) = pk.encapsulate(&mut rng);
+        // Ensure CT is not all zeros
+        assert!(!ct.to_bytes().iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn test_decapsulation_modified_ciphertext_fails() {
+        let mut rng = OsRng;
+        let (sk, pk) = generate_keypair(&mut rng);
+        let (ct, ss_encap) = pk.encapsulate(&mut rng);
+        // Modify the CT
+        let mut modified_bytes = ct.to_bytes();
+        modified_bytes[0] ^= 1; // Flip a bit
+        let modified_ct = Ciphertext::from(&modified_bytes);
+        let ss_decap = sk.decapsulate(&modified_ct);
+        // Should produce different secret
+        assert_ne!(ss_encap, ss_decap);
+    }
+
+    #[test]
+    fn test_ciphertext_size() {
+        let mut rng = OsRng;
+        let (_, pk) = generate_keypair(&mut rng);
+        let (ct, _) = pk.encapsulate(&mut rng);
+        assert_eq!(ct.to_bytes().len(), CIPHERTEXT_SIZE);
     }
 }
 
@@ -211,6 +254,37 @@ mod xwing_kem_512_tests {
         // but X25519 will give different ss_x, so overall different secret.
         assert_ne!(ss_encap, ss_decap);
     }
+
+    #[test]
+    fn test_encapsulation_non_zero_ciphertext() {
+        let mut rng = OsRng;
+        let (_, pk) = kem512::generate_keypair(&mut rng);
+        let (ct, _) = pk.encapsulate(&mut rng);
+        // Ensure CT is not all zeros
+        assert!(!ct.to_bytes().iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn test_decapsulation_modified_ciphertext_fails() {
+        let mut rng = OsRng;
+        let (sk, pk) = kem512::generate_keypair(&mut rng);
+        let (ct, ss_encap) = pk.encapsulate(&mut rng);
+        // Modify the CT
+        let mut modified_bytes = ct.to_bytes();
+        modified_bytes[0] ^= 1; // Flip a bit
+        let modified_ct = kem512::Ciphertext::from(&modified_bytes);
+        let ss_decap = sk.decapsulate(&modified_ct);
+        // Should produce different secret
+        assert_ne!(ss_encap, ss_decap);
+    }
+
+    #[test]
+    fn test_ciphertext_size() {
+        let mut rng = OsRng;
+        let (_, pk) = kem512::generate_keypair(&mut rng);
+        let (ct, _) = pk.encapsulate(&mut rng);
+        assert_eq!(ct.to_bytes().len(), kem512::CIPHERTEXT_SIZE);
+    }
 }
 
 #[cfg(test)]
@@ -285,5 +359,36 @@ mod xwing_kem_768_tests {
         // Since it's hybrid, and ML-KEM decapsulates to random if wrong key,
         // but X25519 will give different ss_x, so overall different secret.
         assert_ne!(ss_encap, ss_decap);
+    }
+
+    #[test]
+    fn test_encapsulation_non_zero_ciphertext() {
+        let mut rng = OsRng;
+        let (_, pk) = kem768::generate_keypair(&mut rng);
+        let (ct, _) = pk.encapsulate(&mut rng);
+        // Ensure CT is not all zeros
+        assert!(!ct.to_bytes().iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn test_decapsulation_modified_ciphertext_fails() {
+        let mut rng = OsRng;
+        let (sk, pk) = kem768::generate_keypair(&mut rng);
+        let (ct, ss_encap) = pk.encapsulate(&mut rng);
+        // Modify the CT
+        let mut modified_bytes = ct.to_bytes();
+        modified_bytes[0] ^= 1; // Flip a bit
+        let modified_ct = kem768::Ciphertext::from(&modified_bytes);
+        let ss_decap = sk.decapsulate(&modified_ct);
+        // Should produce different secret
+        assert_ne!(ss_encap, ss_decap);
+    }
+
+    #[test]
+    fn test_ciphertext_size() {
+        let mut rng = OsRng;
+        let (_, pk) = kem768::generate_keypair(&mut rng);
+        let (ct, _) = pk.encapsulate(&mut rng);
+        assert_eq!(ct.to_bytes().len(), kem768::CIPHERTEXT_SIZE);
     }
 }
