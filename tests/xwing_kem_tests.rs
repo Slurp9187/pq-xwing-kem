@@ -6,8 +6,8 @@ use rand_core::OsRng;
 use xwing_kem::combiner::combiner as combiner_fn;
 use xwing_kem::consts::SHARED_SECRET_SIZE;
 use xwing_kem::xwing_kem_1024::{
-    xwing1024_generate_keypair, Ciphertext, EncapsulationKey, XWING1024_CIPHERTEXT_SIZE,
-    XWING1024_ENCAPSULATION_KEY_SIZE,
+    generate_keypair_xwing_kem_1024, Ciphertext, EncapsulationKey, XWING_KEM_1024_CIPHERTEXT_SIZE,
+    XWING_KEM_1024_ENCAPSULATION_KEY_SIZE,
 };
 use xwing_kem::xwing_kem_512 as kem512;
 use xwing_kem::xwing_kem_768 as kem768;
@@ -83,27 +83,27 @@ mod xwing_kem_1024_tests {
     #[test]
     fn test_generate_keypair() {
         let mut rng = OsRng;
-        let (_sk, pk) = xwing1024_generate_keypair(&mut rng);
+        let (_sk, pk) = generate_keypair_xwing_kem_1024(&mut rng);
 
-        assert_eq!(pk.to_bytes().len(), XWING1024_ENCAPSULATION_KEY_SIZE);
+        assert_eq!(pk.to_bytes().len(), XWING_KEM_1024_ENCAPSULATION_KEY_SIZE);
     }
 
     #[test]
     fn test_encapsulation_decapsulation_roundtrip() {
         let mut rng = OsRng;
-        let (sk, pk) = xwing1024_generate_keypair(&mut rng);
+        let (sk, pk) = generate_keypair_xwing_kem_1024(&mut rng);
 
         let (ct, ss_encap) = pk.encapsulate();
         let ss_decap = sk.decapsulate(&ct);
 
         assert_eq!(ss_encap, ss_decap);
-        assert_eq!(ct.to_bytes().len(), XWING1024_CIPHERTEXT_SIZE);
+        assert_eq!(ct.to_bytes().len(), XWING_KEM_1024_CIPHERTEXT_SIZE);
     }
 
     #[test]
     fn test_encapsulation_key_serialization() {
         let mut rng = OsRng;
-        let (_sk, pk) = xwing1024_generate_keypair(&mut rng);
+        let (_sk, pk) = generate_keypair_xwing_kem_1024(&mut rng);
 
         let pk_bytes = pk.to_bytes();
         let pk_restored = EncapsulationKey::from(&pk_bytes);
@@ -114,7 +114,7 @@ mod xwing_kem_1024_tests {
     #[test]
     fn test_ciphertext_serialization() {
         let mut rng = OsRng;
-        let (_sk, pk) = xwing1024_generate_keypair(&mut rng);
+        let (_sk, pk) = generate_keypair_xwing_kem_1024(&mut rng);
 
         let (ct, _) = pk.encapsulate();
         let ct_bytes = ct.to_bytes();
@@ -126,8 +126,8 @@ mod xwing_kem_1024_tests {
     #[test]
     fn test_different_keys_produce_different_secrets() {
         let mut rng = OsRng;
-        let (_sk1, pk1) = xwing1024_generate_keypair(&mut rng);
-        let (_sk2, pk2) = xwing1024_generate_keypair(&mut rng);
+        let (_sk1, pk1) = generate_keypair_xwing_kem_1024(&mut rng);
+        let (_sk2, pk2) = generate_keypair_xwing_kem_1024(&mut rng);
 
         let (ct1, ss1) = pk1.encapsulate();
         let (ct2, ss2) = pk2.encapsulate();
@@ -139,8 +139,8 @@ mod xwing_kem_1024_tests {
     #[test]
     fn test_wrong_key_decapsulate_fails() {
         let mut rng = OsRng;
-        let (_sk1, pk1) = xwing1024_generate_keypair(&mut rng);
-        let (sk2, _pk2) = xwing1024_generate_keypair(&mut rng);
+        let (_sk1, pk1) = generate_keypair_xwing_kem_1024(&mut rng);
+        let (sk2, _pk2) = generate_keypair_xwing_kem_1024(&mut rng);
 
         let (ct, ss_encap) = pk1.encapsulate();
         let ss_decap = sk2.decapsulate(&ct);
@@ -153,7 +153,7 @@ mod xwing_kem_1024_tests {
     #[test]
     fn test_encapsulation_non_zero_ciphertext() {
         let mut rng = OsRng;
-        let (_, pk) = xwing1024_generate_keypair(&mut rng);
+        let (_, pk) = generate_keypair_xwing_kem_1024(&mut rng);
         let (ct, _) = pk.encapsulate();
         // Ensure CT is not all zeros
         assert!(!ct.to_bytes().iter().all(|&b| b == 0));
@@ -162,7 +162,7 @@ mod xwing_kem_1024_tests {
     #[test]
     fn test_decapsulation_modified_ciphertext_fails() {
         let mut rng = OsRng;
-        let (sk, pk) = xwing1024_generate_keypair(&mut rng);
+        let (sk, pk) = generate_keypair_xwing_kem_1024(&mut rng);
         let (ct, ss_encap) = pk.encapsulate();
         // Modify the CT
         let mut modified_bytes = ct.to_bytes();
@@ -176,9 +176,9 @@ mod xwing_kem_1024_tests {
     #[test]
     fn test_ciphertext_size() {
         let mut rng = OsRng;
-        let (_, pk) = xwing1024_generate_keypair(&mut rng);
+        let (_, pk) = generate_keypair_xwing_kem_1024(&mut rng);
         let (ct, _) = pk.encapsulate();
-        assert_eq!(ct.to_bytes().len(), XWING1024_CIPHERTEXT_SIZE);
+        assert_eq!(ct.to_bytes().len(), XWING_KEM_1024_CIPHERTEXT_SIZE);
     }
 }
 
@@ -189,27 +189,30 @@ mod xwing_kem_512_tests {
     #[test]
     fn test_generate_keypair() {
         let mut rng = OsRng;
-        let (_sk, pk) = kem512::xwing512_generate_keypair(&mut rng);
+        let (_sk, pk) = kem512::generate_keypair_xwing_kem_512(&mut rng);
 
-        assert_eq!(pk.to_bytes().len(), kem512::XWING512_ENCAPSULATION_KEY_SIZE);
+        assert_eq!(
+            pk.to_bytes().len(),
+            kem512::XWING_KEM_512_ENCAPSULATION_KEY_SIZE
+        );
     }
 
     #[test]
     fn test_encapsulation_decapsulation_roundtrip() {
         let mut rng = OsRng;
-        let (sk, pk) = kem512::xwing512_generate_keypair(&mut rng);
+        let (sk, pk) = kem512::generate_keypair_xwing_kem_512(&mut rng);
 
         let (ct, ss_encap) = pk.encapsulate(&mut rng);
         let ss_decap = sk.decapsulate(&ct);
 
         assert_eq!(ss_encap, ss_decap);
-        assert_eq!(ct.to_bytes().len(), kem512::XWING512_CIPHERTEXT_SIZE);
+        assert_eq!(ct.to_bytes().len(), kem512::XWING_KEM_512_CIPHERTEXT_SIZE);
     }
 
     #[test]
     fn test_encapsulation_key_serialization() {
         let mut rng = OsRng;
-        let (_sk, pk) = kem512::xwing512_generate_keypair(&mut rng);
+        let (_sk, pk) = kem512::generate_keypair_xwing_kem_512(&mut rng);
 
         let pk_bytes = pk.to_bytes();
         let pk_restored = kem512::EncapsulationKey::from(&pk_bytes);
@@ -220,7 +223,7 @@ mod xwing_kem_512_tests {
     #[test]
     fn test_ciphertext_serialization() {
         let mut rng = OsRng;
-        let (_sk, pk) = kem512::xwing512_generate_keypair(&mut rng);
+        let (_sk, pk) = kem512::generate_keypair_xwing_kem_512(&mut rng);
 
         let (ct, _) = pk.encapsulate(&mut rng);
         let ct_bytes = ct.to_bytes();
@@ -232,8 +235,8 @@ mod xwing_kem_512_tests {
     #[test]
     fn test_different_keys_produce_different_secrets() {
         let mut rng = OsRng;
-        let (_sk1, pk1) = kem512::xwing512_generate_keypair(&mut rng);
-        let (_sk2, pk2) = kem512::xwing512_generate_keypair(&mut rng);
+        let (_sk1, pk1) = kem512::generate_keypair_xwing_kem_512(&mut rng);
+        let (_sk2, pk2) = kem512::generate_keypair_xwing_kem_512(&mut rng);
 
         let (ct1, ss1) = pk1.encapsulate(&mut rng);
         let (ct2, ss2) = pk2.encapsulate(&mut rng);
@@ -245,8 +248,8 @@ mod xwing_kem_512_tests {
     #[test]
     fn test_wrong_key_decapsulate_fails() {
         let mut rng = OsRng;
-        let (_sk1, pk1) = kem512::xwing512_generate_keypair(&mut rng);
-        let (sk2, _pk2) = kem512::xwing512_generate_keypair(&mut rng);
+        let (_sk1, pk1) = kem512::generate_keypair_xwing_kem_512(&mut rng);
+        let (sk2, _pk2) = kem512::generate_keypair_xwing_kem_512(&mut rng);
 
         let (ct, ss_encap) = pk1.encapsulate(&mut rng);
         let ss_decap = sk2.decapsulate(&ct);
@@ -259,7 +262,7 @@ mod xwing_kem_512_tests {
     #[test]
     fn test_encapsulation_non_zero_ciphertext() {
         let mut rng = OsRng;
-        let (_, pk) = kem512::xwing512_generate_keypair(&mut rng);
+        let (_, pk) = kem512::generate_keypair_xwing_kem_512(&mut rng);
         let (ct, _) = pk.encapsulate(&mut rng);
         // Ensure CT is not all zeros
         assert!(!ct.to_bytes().iter().all(|&b| b == 0));
@@ -268,7 +271,7 @@ mod xwing_kem_512_tests {
     #[test]
     fn test_decapsulation_modified_ciphertext_fails() {
         let mut rng = OsRng;
-        let (sk, pk) = kem512::xwing512_generate_keypair(&mut rng);
+        let (sk, pk) = kem512::generate_keypair_xwing_kem_512(&mut rng);
         let (ct, ss_encap) = pk.encapsulate(&mut rng);
         // Modify the CT
         let mut modified_bytes = ct.to_bytes();
@@ -282,9 +285,9 @@ mod xwing_kem_512_tests {
     #[test]
     fn test_ciphertext_size() {
         let mut rng = OsRng;
-        let (_, pk) = kem512::xwing512_generate_keypair(&mut rng);
+        let (_, pk) = kem512::generate_keypair_xwing_kem_512(&mut rng);
         let (ct, _) = pk.encapsulate(&mut rng);
-        assert_eq!(ct.to_bytes().len(), kem512::XWING512_CIPHERTEXT_SIZE);
+        assert_eq!(ct.to_bytes().len(), kem512::XWING_KEM_512_CIPHERTEXT_SIZE);
     }
 }
 
@@ -295,27 +298,30 @@ mod xwing_kem_768_tests {
     #[test]
     fn test_generate_keypair() {
         let mut rng = OsRng;
-        let (_sk, pk) = kem768::xwing768_generate_keypair(&mut rng);
+        let (_sk, pk) = kem768::generate_keypair_xwing_kem_768(&mut rng);
 
-        assert_eq!(pk.to_bytes().len(), kem768::XWING768_ENCAPSULATION_KEY_SIZE);
+        assert_eq!(
+            pk.to_bytes().len(),
+            kem768::XWING_KEM_768_ENCAPSULATION_KEY_SIZE
+        );
     }
 
     #[test]
     fn test_encapsulation_decapsulation_roundtrip() {
         let mut rng = OsRng;
-        let (sk, pk) = kem768::xwing768_generate_keypair(&mut rng);
+        let (sk, pk) = kem768::generate_keypair_xwing_kem_768(&mut rng);
 
         let (ct, ss_encap) = pk.encapsulate(&mut rng);
         let ss_decap = sk.decapsulate(&ct);
 
         assert_eq!(ss_encap, ss_decap);
-        assert_eq!(ct.to_bytes().len(), kem768::XWING768_CIPHERTEXT_SIZE);
+        assert_eq!(ct.to_bytes().len(), kem768::XWING_KEM_768_CIPHERTEXT_SIZE);
     }
 
     #[test]
     fn test_encapsulation_key_serialization() {
         let mut rng = OsRng;
-        let (_sk, pk) = kem768::xwing768_generate_keypair(&mut rng);
+        let (_sk, pk) = kem768::generate_keypair_xwing_kem_768(&mut rng);
 
         let pk_bytes = pk.to_bytes();
         let pk_restored = kem768::EncapsulationKey::from(&pk_bytes);
@@ -326,7 +332,7 @@ mod xwing_kem_768_tests {
     #[test]
     fn test_ciphertext_serialization() {
         let mut rng = OsRng;
-        let (_sk, pk) = kem768::xwing768_generate_keypair(&mut rng);
+        let (_sk, pk) = kem768::generate_keypair_xwing_kem_768(&mut rng);
 
         let (ct, _) = pk.encapsulate(&mut rng);
         let ct_bytes = ct.to_bytes();
@@ -338,8 +344,8 @@ mod xwing_kem_768_tests {
     #[test]
     fn test_different_keys_produce_different_secrets() {
         let mut rng = OsRng;
-        let (_sk1, pk1) = kem768::xwing768_generate_keypair(&mut rng);
-        let (_sk2, pk2) = kem768::xwing768_generate_keypair(&mut rng);
+        let (_sk1, pk1) = kem768::generate_keypair_xwing_kem_768(&mut rng);
+        let (_sk2, pk2) = kem768::generate_keypair_xwing_kem_768(&mut rng);
 
         let (ct1, ss1) = pk1.encapsulate(&mut rng);
         let (ct2, ss2) = pk2.encapsulate(&mut rng);
@@ -351,8 +357,8 @@ mod xwing_kem_768_tests {
     #[test]
     fn test_wrong_key_decapsulate_fails() {
         let mut rng = OsRng;
-        let (_sk1, pk1) = kem768::xwing768_generate_keypair(&mut rng);
-        let (sk2, _pk2) = kem768::xwing768_generate_keypair(&mut rng);
+        let (_sk1, pk1) = kem768::generate_keypair_xwing_kem_768(&mut rng);
+        let (sk2, _pk2) = kem768::generate_keypair_xwing_kem_768(&mut rng);
 
         let (ct, ss_encap) = pk1.encapsulate(&mut rng);
         let ss_decap = sk2.decapsulate(&ct);
@@ -365,7 +371,7 @@ mod xwing_kem_768_tests {
     #[test]
     fn test_encapsulation_non_zero_ciphertext() {
         let mut rng = OsRng;
-        let (_, pk) = kem768::xwing768_generate_keypair(&mut rng);
+        let (_, pk) = kem768::generate_keypair_xwing_kem_768(&mut rng);
         let (ct, _) = pk.encapsulate(&mut rng);
         // Ensure CT is not all zeros
         assert!(!ct.to_bytes().iter().all(|&b| b == 0));
@@ -374,7 +380,7 @@ mod xwing_kem_768_tests {
     #[test]
     fn test_decapsulation_modified_ciphertext_fails() {
         let mut rng = OsRng;
-        let (sk, pk) = kem768::xwing768_generate_keypair(&mut rng);
+        let (sk, pk) = kem768::generate_keypair_xwing_kem_768(&mut rng);
         let (ct, ss_encap) = pk.encapsulate(&mut rng);
         // Modify the CT
         let mut modified_bytes = ct.to_bytes();
@@ -388,8 +394,8 @@ mod xwing_kem_768_tests {
     #[test]
     fn test_ciphertext_size() {
         let mut rng = OsRng;
-        let (_, pk) = kem768::xwing768_generate_keypair(&mut rng);
+        let (_, pk) = kem768::generate_keypair_xwing_kem_768(&mut rng);
         let (ct, _) = pk.encapsulate(&mut rng);
-        assert_eq!(ct.to_bytes().len(), kem768::XWING768_CIPHERTEXT_SIZE);
+        assert_eq!(ct.to_bytes().len(), kem768::XWING_KEM_768_CIPHERTEXT_SIZE);
     }
 }
