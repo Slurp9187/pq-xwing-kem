@@ -1,7 +1,12 @@
 [package]
 name = "pq-xwing-kem"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+repository = "https://github.com/Slurp9187/pq-xwing-kem"
+description = "Post-quantum hybrid X-Wing Key Encapsulation Mechanism (all ML-KEM variants + X25519)."
+license = "MIT OR Apache-2.0"
+keywords = ["post-quantum", "cryptography", "hybrid", "ML-KEM", "X25519"]
+categories = ["cryptography"]
 
 [dependencies]
 libcrux-ml-kem = { git = "https://github.com/cryspen/libcrux", package = "libcrux-ml-kem", branch = "main" }
