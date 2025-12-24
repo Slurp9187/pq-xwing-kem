@@ -21,23 +21,11 @@ extern crate alloc;
 pub mod combiner;
 pub mod consts;
 pub mod error;
-pub mod xwing_kem_1024;
-pub mod xwing_kem_512;
-pub mod xwing_kem_768;
+pub mod xwing1024;
+pub mod xwing512;
+pub mod xwing768;
 
 pub(crate) use combiner::combiner;
-pub use xwing_kem_1024::{
-    generate_keypair_xwing_kem_1024, XWING_KEM_1024_CIPHERTEXT_SIZE, XWING_KEM_1024_DECAPSULATION_KEY_SIZE,
-    XWING_KEM_1024_ENCAPSULATION_KEY_SIZE,
-};
-pub use xwing_kem_512::{
-    generate_keypair_xwing_kem_512, XWING_KEM_512_CIPHERTEXT_SIZE,
-    XWING_KEM_512_DECAPSULATION_KEY_SIZE, XWING_KEM_512_ENCAPSULATION_KEY_SIZE,
-};
-pub use xwing_kem_768::{
-    generate_keypair_xwing_kem_768, XWING_KEM_768_CIPHERTEXT_SIZE, XWING_KEM_768_DECAPSULATION_KEY_SIZE,
-    XWING_KEM_768_ENCAPSULATION_KEY_SIZE,
-};
 
 pub const XWING_DRAFT_VERSION: &str = "09";
 

@@ -1,4 +1,4 @@
-// xwing-kem/src/error.rs
+// src/error.rs
 
 //! Error types for xwing-kem operations.
 

@@ -1,4 +1,4 @@
-// src/crypto/xwing_kem/combiner.rs
+// src/combiner.rs
 use super::SharedSecret;
 use sha3::{Digest, Sha3_256};
 

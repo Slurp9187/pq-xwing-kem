@@ -1,6 +1,8 @@
-// src/xwing512.rs
+// src/xwing_kem_512.rs
 
-use super::{combiner, consts::X25519_KEY_SIZE, SharedSecret, MASTER_SEED_SIZE};
+use crate::combiner;
+use crate::consts::{MASTER_SEED_SIZE, X25519_KEY_SIZE};
+use crate::SharedSecret;
 use libcrux_ml_kem::mlkem512::{
     decapsulate, encapsulate, generate_key_pair, MlKem512Ciphertext, MlKem512KeyPair,
     MlKem512PublicKey,
@@ -11,16 +13,16 @@ use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-const PK_SIZE: usize = 800;
-pub const XWING512_CT_SIZE: usize = 768;
+const MLKEM512_PK_SIZE: usize = 800;
+pub const MLKEM512_CT_SIZE: usize = 768;
 
-pub const XWING_KEM_512_ENCAPSULATION_KEY_SIZE: usize = PK_SIZE + X25519_KEY_SIZE;
-pub const XWING_KEM_512_DECAPSULATION_KEY_SIZE: usize = X25519_KEY_SIZE;
-pub const XWING_KEM_512_CIPHERTEXT_SIZE: usize = XWING512_CT_SIZE + X25519_KEY_SIZE;
+pub const XWING512_ENCAPSULATION_KEY_SIZE: usize = MLKEM512_PK_SIZE + X25519_KEY_SIZE;
+pub const XWING512_DECAPSULATION_KEY_SIZE: usize = X25519_KEY_SIZE;
+pub const XWING512_CIPHERTEXT_SIZE: usize = MLKEM512_CT_SIZE + X25519_KEY_SIZE;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct EncapsulationKey {
-    pk_m: [u8; PK_SIZE],
+    pk_m: [u8; MLKEM512_PK_SIZE],
     pk_x: PublicKey,
 }
 
@@ -31,16 +33,16 @@ pub struct DecapsulationKey {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ciphertext {
-    ct_m: [u8; XWING512_CT_SIZE],
+    ct_m: [u8; MLKEM512_CT_SIZE],
     ct_x: PublicKey,
 }
 
 impl EncapsulationKey {
     #[must_use]
-    pub fn to_bytes(&self) -> [u8; XWING_KEM_512_ENCAPSULATION_KEY_SIZE] {
-        let mut buffer = [0u8; XWING_KEM_512_ENCAPSULATION_KEY_SIZE];
-        buffer[..PK_SIZE].copy_from_slice(&self.pk_m);
-        buffer[PK_SIZE..].copy_from_slice(&self.pk_x.to_bytes());
+    pub fn to_bytes(&self) -> [u8; XWING512_ENCAPSULATION_KEY_SIZE] {
+        let mut buffer = [0u8; XWING512_ENCAPSULATION_KEY_SIZE];
+        buffer[..MLKEM512_PK_SIZE].copy_from_slice(&self.pk_m);
+        buffer[MLKEM512_PK_SIZE..].copy_from_slice(&self.pk_x.to_bytes());
         buffer
     }
 
@@ -53,7 +55,7 @@ impl EncapsulationKey {
         rng.fill_bytes(&mut ml_rand);
         let (ct_m, mut ss_m) = encapsulate(&pk_m, ml_rand);
 
-        let ct_m_bytes: [u8; XWING512_CT_SIZE] = ct_m
+        let ct_m_bytes: [u8; MLKEM512_CT_SIZE] = ct_m
             .as_ref()
             .try_into()
             .expect("ML-KEM ciphertext size mismatch");
@@ -81,11 +83,11 @@ impl EncapsulationKey {
     }
 }
 
-impl From<&[u8; XWING_KEM_512_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
-    fn from(bytes: &[u8; XWING_KEM_512_ENCAPSULATION_KEY_SIZE]) -> Self {
-        let mut pk_m = [0u8; PK_SIZE];
-        pk_m.copy_from_slice(&bytes[..PK_SIZE]);
-        let pk_x_bytes: [u8; 32] = bytes[PK_SIZE..].try_into().unwrap();
+impl From<&[u8; XWING512_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+    fn from(bytes: &[u8; XWING512_ENCAPSULATION_KEY_SIZE]) -> Self {
+        let mut pk_m = [0u8; MLKEM512_PK_SIZE];
+        pk_m.copy_from_slice(&bytes[..MLKEM512_PK_SIZE]);
+        let pk_x_bytes: [u8; 32] = bytes[MLKEM512_PK_SIZE..].try_into().unwrap();
         let pk_x = PublicKey::from(pk_x_bytes);
         Self { pk_m, pk_x }
     }
@@ -101,7 +103,7 @@ impl DecapsulationKey {
     #[must_use]
     pub fn encapsulation_key(&self) -> EncapsulationKey {
         let (kp, x_bytes) = expand_seed(&self.seed);
-        let pk_m_bytes: [u8; PK_SIZE] = kp
+        let pk_m_bytes: [u8; MLKEM512_PK_SIZE] = kp
             .public_key()
             .as_ref()
             .try_into()
@@ -144,25 +146,25 @@ impl DecapsulationKey {
 
 impl Ciphertext {
     #[must_use]
-    pub fn to_bytes(&self) -> [u8; XWING_KEM_512_CIPHERTEXT_SIZE] {
-        let mut buffer = [0u8; XWING_KEM_512_CIPHERTEXT_SIZE];
-        buffer[..XWING512_CT_SIZE].copy_from_slice(&self.ct_m);
-        buffer[XWING512_CT_SIZE..].copy_from_slice(&self.ct_x.to_bytes());
+    pub fn to_bytes(&self) -> [u8; XWING512_CIPHERTEXT_SIZE] {
+        let mut buffer = [0u8; XWING512_CIPHERTEXT_SIZE];
+        buffer[..MLKEM512_CT_SIZE].copy_from_slice(&self.ct_m);
+        buffer[MLKEM512_CT_SIZE..].copy_from_slice(&self.ct_x.to_bytes());
         buffer
     }
 }
 
-impl From<&[u8; XWING_KEM_512_CIPHERTEXT_SIZE]> for Ciphertext {
-    fn from(bytes: &[u8; XWING_KEM_512_CIPHERTEXT_SIZE]) -> Self {
-        let mut ct_m = [0u8; XWING512_CT_SIZE];
-        ct_m.copy_from_slice(&bytes[..XWING512_CT_SIZE]);
-        let ct_x_bytes: [u8; 32] = bytes[XWING512_CT_SIZE..].try_into().unwrap();
+impl From<&[u8; XWING512_CIPHERTEXT_SIZE]> for Ciphertext {
+    fn from(bytes: &[u8; XWING512_CIPHERTEXT_SIZE]) -> Self {
+        let mut ct_m = [0u8; MLKEM512_CT_SIZE];
+        ct_m.copy_from_slice(&bytes[..MLKEM512_CT_SIZE]);
+        let ct_x_bytes: [u8; 32] = bytes[MLKEM512_CT_SIZE..].try_into().unwrap();
         let ct_x = PublicKey::from(ct_x_bytes);
         Self { ct_m, ct_x }
     }
 }
 
-pub fn generate_keypair_xwing_kem_512<R: rand_core::RngCore + rand_core::CryptoRng>(
+pub fn generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
     rng: &mut R,
 ) -> (DecapsulationKey, EncapsulationKey) {
     let sk = DecapsulationKey::generate(rng);
