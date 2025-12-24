@@ -32,4 +32,9 @@ pub const XWING_DRAFT_VERSION: &str = "09";
 pub use consts::{MASTER_SEED_SIZE, SHARED_SECRET_SIZE};
 pub use error::{Error, Result};
 
+/// The shared secret produced by X-Wing KEM encapsulation or decapsulation.
+///
+/// This is a 32-byte array representing the hybrid post-quantum/classical symmetric key
+/// derived from ML-KEM and X25519 components. It ensures type safety for the final output
+/// of the scheme's cryptographic operations.
 pub type SharedSecret = [u8; SHARED_SECRET_SIZE];
