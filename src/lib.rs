@@ -22,7 +22,6 @@ pub mod combiner;
 pub mod consts;
 pub mod error;
 pub mod xwing1024;
-pub mod xwing512;
 pub mod xwing768;
 
 pub(crate) use combiner::combiner;
