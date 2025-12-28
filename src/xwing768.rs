@@ -141,6 +141,10 @@ impl TryFrom<&[u8; XWING768_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
 }
 
 impl DecapsulationKey {
+    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
+        Self { seed: *seed }
+    }
+
     pub fn generate<R: rand_core::RngCore + rand_core::CryptoRng>(rng: &mut R) -> Self {
         let mut seed = [0u8; MASTER_SEED_SIZE];
         rng.fill_bytes(&mut seed);

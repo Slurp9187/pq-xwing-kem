@@ -38,12 +38,19 @@ pub struct DecapsulationKey {
     seed: [u8; MASTER_SEED_SIZE],
 }
 
+impl DecapsulationKey {
+}
+
 pub struct Ciphertext {
     ct_m: [u8; MLKEM1024_CT_SIZE],
     ct_x: PublicKey,
 }
 
 impl EncapsulationKey {
+    /// Deterministic generation from 32-byte seed (matching xwing768.rs API)
+    /// Deterministic generation from 32-byte seed (matching xwing768.rs API)
+    /// This method intentionally removed - use DecapsulationKey::from_seed() + encapsulation_key() instead
+
     pub fn to_bytes(&self) -> [u8; XWING1024_ENCAPSULATION_KEY_SIZE] {
         let mut buffer = [0u8; XWING1024_ENCAPSULATION_KEY_SIZE];
         buffer[..MLKEM1024_PK_SIZE].copy_from_slice(&self.pk_m);
@@ -183,9 +190,6 @@ impl DecapsulationKey {
         Ok(ss)
     }
 
-    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
-        Self { seed: *seed }
-    }
 }
 
 impl Ciphertext {
