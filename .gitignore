@@ -2,6 +2,7 @@
 target*/
 /target*/
 /code_packages/
+.zed
 
 # Database and temporary files
 *.bak
