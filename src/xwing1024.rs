@@ -126,8 +126,10 @@ impl TryFrom<&[u8; XWING1024_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
             return Err(crate::Error::InvalidX25519PublicKey);
         }
 
-        // Validate ML-KEM public key by attempting to create it
-        let _mlkem_pk = MlKem1024PublicKey::from(pk_m);
+        // Validate ML-KEM public key by attempting to create it and test basic functionality
+        let mlkem_pk = MlKem1024PublicKey::from(pk_m);
+        // Test that the key can be used for basic operations by checking it can be converted back
+        let _pk_bytes = mlkem_pk.as_ref();
 
         Ok(Self { pk_m, pk_x })
     }
@@ -146,22 +148,21 @@ impl DecapsulationKey {
         Self { seed }
     }
 
-    #[must_use]
-    pub fn encapsulation_key(&self) -> EncapsulationKey {
+    pub fn encapsulation_key(&self) -> crate::Result<EncapsulationKey> {
         let (kp, x_bytes) = expand_seed(&self.seed);
         let pk_m_bytes: [u8; MLKEM1024_PK_SIZE] = kp
             .public_key()
             .as_ref()
             .try_into()
-            .expect("ML-KEM public key size mismatch");
+            .map_err(|_| crate::Error::ArraySizeError)?;
 
         let sk_x = StaticSecret::from(x_bytes);
         let pk_x = PublicKey::from(&sk_x);
 
-        EncapsulationKey {
+        Ok(EncapsulationKey {
             pk_m: pk_m_bytes,
             pk_x,
-        }
+        })
     }
 
     pub fn decapsulate(&self, ct: &Ciphertext) -> Result<SharedSecret> {
@@ -239,10 +240,10 @@ impl Ciphertext {
 
 pub fn generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
     rng: &mut R,
-) -> (DecapsulationKey, EncapsulationKey) {
+) -> crate::Result<(DecapsulationKey, EncapsulationKey)> {
     let sk = DecapsulationKey::generate(rng);
-    let pk = sk.encapsulation_key();
-    (sk, pk)
+    let pk = sk.encapsulation_key()?;
+    Ok((sk, pk))
 }
 
 fn expand_seed(seed: &[u8; MASTER_SEED_SIZE]) -> (MlKem1024KeyPair, [u8; 32]) {

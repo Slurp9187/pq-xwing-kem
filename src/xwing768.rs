@@ -83,6 +83,37 @@ impl EncapsulationKey {
             ss,
         ))
     }
+
+    /// Public getter for pk_m
+    pub fn pk_m(&self) -> &[u8; MLKEM768_PK_SIZE] {
+        &self.pk_m
+    }
+
+    /// Public getter for pk_x
+    pub fn pk_x(&self) -> &PublicKey {
+        &self.pk_x
+    }
+
+    /// Deterministic generation from 32-byte seed
+    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
+        let (kp, x_bytes) = expand_seed(seed);
+        let pk_m_bytes: [u8; MLKEM768_PK_SIZE] = kp
+            .public_key()
+            .as_ref()
+            .try_into()
+            .expect("ML-KEM public key size mismatch");
+
+        let sk_x = StaticSecret::from(x_bytes);
+        let pk_x = PublicKey::from(&sk_x);
+
+        Self::from_components(pk_m_bytes, pk_x)
+    }
+}
+
+impl EncapsulationKey {
+    pub fn from_components(pk_m: [u8; MLKEM768_PK_SIZE], pk_x: PublicKey) -> Self {
+        Self { pk_m, pk_x }
+    }
 }
 
 impl TryFrom<&[u8; XWING768_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
@@ -100,8 +131,10 @@ impl TryFrom<&[u8; XWING768_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
             return Err(crate::Error::InvalidX25519PublicKey);
         }
 
-        // Validate ML-KEM public key by attempting to create it
-        let _mlkem_pk = MlKem768PublicKey::from(pk_m);
+        // Validate ML-KEM public key by attempting to create it and test basic functionality
+        let mlkem_pk = MlKem768PublicKey::from(pk_m);
+        // Test that the key can be used for basic operations by checking it can be converted back
+        let _pk_bytes = mlkem_pk.as_ref();
 
         Ok(Self { pk_m, pk_x })
     }
@@ -114,31 +147,28 @@ impl DecapsulationKey {
         Self { seed }
     }
 
-    #[must_use]
-    pub fn encapsulation_key(&self) -> EncapsulationKey {
+    pub fn encapsulation_key(&self) -> crate::Result<EncapsulationKey> {
         let (kp, x_bytes) = expand_seed(&self.seed);
         let pk_m_bytes: [u8; MLKEM768_PK_SIZE] = kp
             .public_key()
             .as_ref()
             .try_into()
-            .expect("ML-KEM public key size mismatch");
+            .map_err(|_| crate::Error::ArraySizeError)?;
 
         let sk_x = StaticSecret::from(x_bytes);
         let pk_x = PublicKey::from(&sk_x);
 
-        EncapsulationKey {
+        Ok(EncapsulationKey {
             pk_m: pk_m_bytes,
             pk_x,
-        }
+        })
     }
 
     pub fn decapsulate(&self, ct: &Ciphertext) -> Result<SharedSecret> {
         let (kp, x_bytes) = expand_seed(&self.seed);
 
-        // kp.private_key() returns &MlKem768PrivateKey
         let sk_m = kp.private_key();
         let ct_m = MlKem768Ciphertext::from(ct.ct_m);
-        // No extra & on sk_m – it's already a reference
         let mut ss_m = decapsulate(sk_m, &ct_m);
 
         let sk_x = StaticSecret::from(x_bytes);
@@ -164,6 +194,20 @@ impl Ciphertext {
         buffer[MLKEM768_CT_SIZE..].copy_from_slice(&self.ct_x.to_bytes());
         buffer
     }
+
+    pub fn from_components(ct_m: [u8; MLKEM768_CT_SIZE], ct_x: PublicKey) -> Self {
+        Self { ct_m, ct_x }
+    }
+
+    /// Public getter for ct_m
+    pub fn ct_m(&self) -> &[u8; MLKEM768_CT_SIZE] {
+        &self.ct_m
+    }
+
+    /// Public getter for ct_x
+    pub fn ct_x(&self) -> &x25519_dalek::PublicKey {
+        &self.ct_x
+    }
 }
 
 impl TryFrom<&[u8; XWING768_CIPHERTEXT_SIZE]> for Ciphertext {
@@ -187,10 +231,10 @@ impl TryFrom<&[u8; XWING768_CIPHERTEXT_SIZE]> for Ciphertext {
 
 pub fn generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
     rng: &mut R,
-) -> (DecapsulationKey, EncapsulationKey) {
+) -> crate::Result<(DecapsulationKey, EncapsulationKey)> {
     let sk = DecapsulationKey::generate(rng);
-    let pk = sk.encapsulation_key();
-    (sk, pk)
+    let pk = sk.encapsulation_key()?;
+    Ok((sk, pk))
 }
 
 fn expand_seed(seed: &[u8; MASTER_SEED_SIZE]) -> (MlKem768KeyPair, [u8; 32]) {

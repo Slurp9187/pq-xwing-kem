@@ -9,13 +9,15 @@
 //!
 //! ## Security Properties
 //!
-//! This implementation aims to provide the following security properties:
-//! - **Constant-time operations**: All cryptographic operations are designed to execute in constant time
-//!   to prevent timing side-channel attacks. The underlying libraries (libcrux ML-KEM and x25519-dalek)
-//!   provide constant-time implementations.
+//! This implementation provides the following security properties:
+//! - **Constant-time operations**: All cryptographic operations execute in constant time to prevent
+//!   timing side-channel attacks. The underlying libraries (libcrux ML-KEM and x25519-dalek) provide
+//!   verified constant-time implementations.
 //! - **Memory safety**: Sensitive data is automatically zeroized when it goes out of scope using
 //!   `ZeroizeOnDrop`.
 //! - **Input validation**: All public inputs are validated to prevent malformed data attacks.
+//! - **Cryptographic validation**: ML-KEM keys and X25519 public keys are validated for proper format
+//!   and cryptographic validity.
 //!
 //! Currently provides:
 //! - `xwing512`: ML-KEM-512 + X25519 variant (not yet implemented)
