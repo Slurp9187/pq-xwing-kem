@@ -9,14 +9,15 @@ keywords = ["post-quantum", "cryptography", "hybrid", "ML-KEM", "X25519"]
 categories = ["cryptography"]
 
 [dependencies]
-libcrux-ml-kem = { git = "https://github.com/cryspen/libcrux", package = "libcrux-ml-kem", branch = "main" }
-rand_core = { version = "0.6", features = ["getrandom"] }
-sha3 = { version = "0.10", default-features = false }
-x25519-dalek = { version = "2.0", default-features = false, features = [
+# Cryptographic dependencies - pinned to specific versions for security and reproducibility
+libcrux-ml-kem = "0.0.4"  # Formally verified ML-KEM implementation
+rand_core = { version = "0.6.4", features = ["getrandom"] }
+sha3 = { version = "0.10.8", default-features = false }
+x25519-dalek = { version = "2.0.1", default-features = false, features = [
   "zeroize",
   "static_secrets",
 ] }
-zeroize = { version = "1.8", features = ["zeroize_derive"] }
-thiserror = "2.0"
+zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
+thiserror = "2.0.3"
 
 [dev-dependencies]
