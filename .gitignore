@@ -1,6 +1,7 @@
 # Build directories
 target*/
 /target*/
+/code_packages/
 
 # Database and temporary files
 *.bak
