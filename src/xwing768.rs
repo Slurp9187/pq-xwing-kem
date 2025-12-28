@@ -2,6 +2,7 @@
 
 use crate::combiner;
 use crate::consts::{MASTER_SEED_SIZE, X25519_KEY_SIZE};
+use crate::error::Result;
 use crate::SharedSecret;
 
 use libcrux_ml_kem::mlkem768::{
@@ -21,7 +22,7 @@ pub const XWING768_ENCAPSULATION_KEY_SIZE: usize = MLKEM768_PK_SIZE + X25519_KEY
 pub const XWING768_DECAPSULATION_KEY_SIZE: usize = X25519_KEY_SIZE;
 pub const XWING768_CIPHERTEXT_SIZE: usize = MLKEM768_CT_SIZE + X25519_KEY_SIZE;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, ZeroizeOnDrop)]
 pub struct EncapsulationKey {
     pk_m: [u8; MLKEM768_PK_SIZE],
     pk_x: PublicKey,
@@ -32,7 +33,7 @@ pub struct DecapsulationKey {
     seed: [u8; MASTER_SEED_SIZE],
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, ZeroizeOnDrop)]
 pub struct Ciphertext {
     ct_m: [u8; MLKEM768_CT_SIZE],
     ct_x: PublicKey,
@@ -50,7 +51,7 @@ impl EncapsulationKey {
     pub fn encapsulate<R: rand_core::RngCore + rand_core::CryptoRng>(
         &self,
         rng: &mut R,
-    ) -> (Ciphertext, SharedSecret) {
+    ) -> Result<(Ciphertext, SharedSecret)> {
         let pk_m = MlKem768PublicKey::from(self.pk_m);
         let mut ml_rand = [0u8; 32];
         rng.fill_bytes(&mut ml_rand);
@@ -59,7 +60,7 @@ impl EncapsulationKey {
         let ct_m_bytes: [u8; MLKEM768_CT_SIZE] = ct_m
             .as_ref()
             .try_into()
-            .expect("ML-KEM ciphertext size mismatch");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
 
         ml_rand.zeroize();
 
@@ -74,23 +75,35 @@ impl EncapsulationKey {
         ss_m.zeroize();
         ss_x.zeroize();
 
-        (
+        Ok((
             Ciphertext {
                 ct_m: ct_m_bytes,
                 ct_x,
             },
             ss,
-        )
+        ))
     }
 }
 
-impl From<&[u8; XWING768_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
-    fn from(bytes: &[u8; XWING768_ENCAPSULATION_KEY_SIZE]) -> Self {
+impl TryFrom<&[u8; XWING768_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+    type Error = crate::Error;
+
+    fn try_from(bytes: &[u8; XWING768_ENCAPSULATION_KEY_SIZE]) -> crate::Result<Self> {
         let mut pk_m = [0u8; MLKEM768_PK_SIZE];
         pk_m.copy_from_slice(&bytes[..MLKEM768_PK_SIZE]);
+
         let pk_x_bytes: [u8; 32] = bytes[MLKEM768_PK_SIZE..].try_into().unwrap();
         let pk_x = PublicKey::from(pk_x_bytes);
-        Self { pk_m, pk_x }
+
+        // Validate that pk_x is not the all-zero point (which is invalid for X25519)
+        if pk_x_bytes.iter().all(|&b| b == 0) {
+            return Err(crate::Error::InvalidX25519PublicKey);
+        }
+
+        // Validate ML-KEM public key by attempting to create it
+        let _mlkem_pk = MlKem768PublicKey::from(pk_m);
+
+        Ok(Self { pk_m, pk_x })
     }
 }
 
@@ -119,8 +132,7 @@ impl DecapsulationKey {
         }
     }
 
-    #[must_use]
-    pub fn decapsulate(&self, ct: &Ciphertext) -> SharedSecret {
+    pub fn decapsulate(&self, ct: &Ciphertext) -> Result<SharedSecret> {
         let (kp, x_bytes) = expand_seed(&self.seed);
 
         // kp.private_key() returns &MlKem768PrivateKey
@@ -141,7 +153,7 @@ impl DecapsulationKey {
         ss_m.zeroize();
         ss_x.zeroize();
 
-        ss
+        Ok(ss)
     }
 }
 impl Ciphertext {
@@ -154,13 +166,22 @@ impl Ciphertext {
     }
 }
 
-impl From<&[u8; XWING768_CIPHERTEXT_SIZE]> for Ciphertext {
-    fn from(bytes: &[u8; XWING768_CIPHERTEXT_SIZE]) -> Self {
+impl TryFrom<&[u8; XWING768_CIPHERTEXT_SIZE]> for Ciphertext {
+    type Error = crate::Error;
+
+    fn try_from(bytes: &[u8; XWING768_CIPHERTEXT_SIZE]) -> crate::Result<Self> {
         let mut ct_m = [0u8; MLKEM768_CT_SIZE];
         ct_m.copy_from_slice(&bytes[..MLKEM768_CT_SIZE]);
+
         let ct_x_bytes: [u8; 32] = bytes[MLKEM768_CT_SIZE..].try_into().unwrap();
         let ct_x = PublicKey::from(ct_x_bytes);
-        Self { ct_m, ct_x }
+
+        // Validate that ct_x is not the all-zero point
+        if ct_x_bytes.iter().all(|&b| b == 0) {
+            return Err(crate::Error::InvalidX25519PublicKey);
+        }
+
+        Ok(Self { ct_m, ct_x })
     }
 }
 

@@ -7,8 +7,18 @@
 //!
 //! Implements draft-connolly-cfrg-xwing-kem-09 specification.
 //!
+//! ## Security Properties
+//!
+//! This implementation aims to provide the following security properties:
+//! - **Constant-time operations**: All cryptographic operations are designed to execute in constant time
+//!   to prevent timing side-channel attacks. The underlying libraries (libcrux ML-KEM and x25519-dalek)
+//!   provide constant-time implementations.
+//! - **Memory safety**: Sensitive data is automatically zeroized when it goes out of scope using
+//!   `ZeroizeOnDrop`.
+//! - **Input validation**: All public inputs are validated to prevent malformed data attacks.
+//!
 //! Currently provides:
-//! - `xwing512`: ML-KEM-512 + X25519 variant
+//! - `xwing512`: ML-KEM-512 + X25519 variant (not yet implemented)
 //! - `xwing768`: ML-KEM-768 + X25519 variant
 //! - `xwing1024`: ML-KEM-1024 + X25519 variant
 

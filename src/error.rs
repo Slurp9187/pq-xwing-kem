@@ -30,6 +30,26 @@ pub enum Error {
     /// Failed to compute X25519 Diffie-Hellman shared secret.
     #[error("X25519 Diffie-Hellman failed")]
     X25519DhError,
+
+    /// Invalid X25519 public key format.
+    #[error("Invalid X25519 public key")]
+    InvalidX25519PublicKey,
+
+    /// Invalid ML-KEM public key format.
+    #[error("Invalid ML-KEM public key")]
+    InvalidMlkemPublicKey,
+
+    /// Invalid ML-KEM ciphertext format.
+    #[error("Invalid ML-KEM ciphertext")]
+    InvalidMlkemCiphertext,
+
+    /// Key generation failed.
+    #[error("Key generation failed")]
+    KeyGenerationError,
+
+    /// Array size conversion failed.
+    #[error("Array size conversion failed")]
+    ArraySizeError,
 }
 
 /// Type alias for results in xwing-kem.
