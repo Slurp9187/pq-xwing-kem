@@ -35,7 +35,7 @@ fn test_encapsulation_key_serialization() {
     let pk_bytes = pk.to_bytes();
     let pk_restored = EncapsulationKey::try_from(&pk_bytes).unwrap();
 
-    assert_eq!(pk, pk_restored);
+    assert_eq!(pk.to_bytes(), pk_restored.to_bytes());
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn test_ciphertext_serialization() {
     let ct_bytes = ct.to_bytes();
     let ct_restored = Ciphertext::try_from(&ct_bytes).unwrap();
 
-    assert_eq!(ct, ct_restored);
+    assert_eq!(ct.to_bytes(), ct_restored.to_bytes());
 }
 
 #[test]
@@ -60,7 +60,7 @@ fn test_different_keys_produce_different_secrets() {
     let (ct2, ss2) = pk2.encapsulate(&mut rng).unwrap();
 
     assert_ne!(ss1, ss2);
-    assert_ne!(ct1, ct2);
+    assert_ne!(ct1.to_bytes(), ct2.to_bytes());
 }
 
 #[test]
@@ -118,5 +118,8 @@ fn test_invalid_x25519_public_key_validation() {
 
     let result = EncapsulationKey::try_from(&invalid_pk_bytes);
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), Error::InvalidX25519PublicKey));
+    if let Err(Error::InvalidX448PublicKey) = result {
+    } else {
+        panic!("Expected InvalidX448PublicKey error");
+    }
 }
