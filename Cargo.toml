@@ -1,7 +1,7 @@
 [package]
 name = "pq-xwing-kem"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 repository = "https://github.com/Slurp9187/pq-xwing-kem"
 description = "Post-quantum hybrid X-Wing Key Encapsulation Mechanism (all ML-KEM variants + X25519)."
 license = "MIT OR Apache-2.0"
@@ -12,12 +12,9 @@ categories = ["cryptography"]
 # Cryptographic dependencies - pinned to specific versions for security and reproducibility
 libcrux-ml-kem = "0.0.4" # Formally verified ML-KEM implementation
 rand_core = { version = "0.9", features = ["os_rng"] } # ← Upgrade to stable 0.9
-
 sha3 = { version = "0.10.8", default-features = false }
 x25519-dalek = { version = "2.0.1", default-features = false, features = ["zeroize", "static_secrets"] }
-# x448 = { git = "https://github.com/RustCrypto/elliptic-curves", package = "x448", version = "0.14.0-pre.1", tag = "x448/v0.14.0-pre.1" }
-# x448 = { git = "https://github.com/RustCrypto/elliptic-curves", package = "x448", rev = "c1c29e9f04251bf96609bf86a299e367f092a928", version = "0.14.0-pre.1"}
-
+x448 = "0.6.0"
 zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
 thiserror = "2.0"
 
@@ -27,9 +24,3 @@ rand_chacha = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 x-wing = {version = "0.1.0-pre.2",features = ["zeroize","os_rng"]}
-# rand = "0.8"
-
-
-[patch.crates-io]
-# x25519-dalek = { git = "https://github.com/dalek-cryptography/x25519-dalek", branch = "main" }
-ed448-goldilocks = { git = "https://github.com/RustCrypto/elliptic-curves", branch = "master", version = "0.14.0-pre.4"}

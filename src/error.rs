@@ -31,13 +31,17 @@ pub enum Error {
     #[error("X25519 Diffie-Hellman failed")]
     X25519DhError,
 
-    /// Invalid X448 public key format.
-    #[error("Invalid X448 public key")]
-    InvalidX448PublicKey,
-
     /// Invalid X25519 public key format.
     #[error("Invalid X25519 public key")]
     InvalidX25519PublicKey,
+
+    /// Failed to compute X448 Diffie-Hellman shared secret.
+    #[error("X448 Diffie-Hellman failed")]
+    X448DhError,
+
+    /// Invalid X448 public key format.
+    #[error("Invalid X448 public key")]
+    InvalidX448PublicKey,
 
     /// Invalid ML-KEM public key format.
     #[error("Invalid ML-KEM public key")]

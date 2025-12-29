@@ -9,30 +9,30 @@
 //!
 //! ## Security Properties
 //!
-//! This implementation provides the following security properties:
-//! - **Constant-time operations**: All cryptographic operations execute in constant time to prevent
-//!   timing side-channel attacks. The underlying libraries (libcrux ML-KEM and x25519-dalek) provide
-//!   verified constant-time implementations.
-//! - **Memory safety**: Sensitive data is automatically zeroized when it goes out of scope using
-//!   `ZeroizeOnDrop`.
-//! - **Input validation**: All public inputs are validated to prevent malformed data attacks.
-//! - **Cryptographic validation**: ML-KEM keys and X25519 public keys are validated for proper format
-//!   and cryptographic validity.
-//!
-//! Currently provides:
-//! - `xwing512`: ML-KEM-512 + X25519 variant (not yet implemented)
-//! - `xwing768`: ML-KEM-768 + X25519 variant
-//! - `xwing1024`: ML-KEM-1024 + X25519 variant
-
+/// This implementation provides the following security properties:
+/// - **Constant-time operations**: All cryptographic operations execute in constant time to prevent
+///   timing side-channel attacks. The underlying libraries (libcrux ML-KEM and x25519-dalek/x448) provide
+///   verified constant-time implementations.
+/// - **Memory safety**: Sensitive data is automatically zeroized when it goes out of scope using
+///   `ZeroizeOnDrop`.
+/// - **Input validation**: All public inputs are validated to prevent malformed data attacks.
+/// - **Cryptographic validation**: ML-KEM keys and X25519/X448 public keys are validated for proper format
+///   and cryptographic validity.
+///
+/// Currently provides:
+/// - `mlkem1024x448`: ML-KEM-1024 + X448 variant
+/// - `xwing512`: ML-KEM-512 + X25519 variant (not yet implemented)
+/// - `xwing768`: ML-KEM-768 + X25519 variant
+/// - `xwing1024`: ML-KEM-1024 + X25519 variant
 // #![no_std]
 // #![deny(missing_docs)]
 // #![deny(unsafe_code)]
-
 extern crate alloc;
 
 pub mod combiner;
 pub mod consts;
 pub mod error;
+pub mod mlkem1024x448;
 pub mod xwing1024;
 pub mod xwing768;
 
