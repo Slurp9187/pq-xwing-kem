@@ -16,15 +16,12 @@ use libcrux_ml_kem::mlkem1024::{
 
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::{Digest, Sha3_256, Shake256};
-use x448::x448;
+use x448::{x448, X448_BASEPOINT_BYTES};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-const BASEPOINT: [u8; 56] = [
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-];
+fn hash_to_32(bytes: &[u8]) -> [u8; 32] {
+    Sha3_256::digest(bytes).into()
+}
 
 const MASTER_SEED_SIZE: usize = 32;
 const X448_KEY_SIZE: usize = 56;
@@ -80,11 +77,11 @@ impl EncapsulationKey {
 
         ml_rand.zeroize();
 
-        let ct_x = x448(ephemeral_bytes, BASEPOINT).unwrap();
+        let ct_x = x448(ephemeral_bytes, X448_BASEPOINT_BYTES).unwrap();
         let mut ss_x_full = x448(ephemeral_bytes, self.pk_x).unwrap();
 
-        let ct_x_reduced = Sha3_256::digest(&ct_x);
-        let pk_x_reduced = Sha3_256::digest(&self.pk_x);
+        let ct_x_reduced = hash_to_32(&ct_x);
+        let pk_x_reduced = hash_to_32(&self.pk_x);
         let mut ss_x = Sha3_256::digest(&ss_x_full);
         let ss = combiner(
             &ss_m,
@@ -125,7 +122,7 @@ impl EncapsulationKey {
             .try_into()
             .expect("ML-KEM public key size mismatch");
 
-        let pk_x = x448(x_bytes, BASEPOINT).unwrap();
+        let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
 
         Self::from_components(pk_m_bytes, pk_x)
     }
@@ -156,12 +153,12 @@ impl EncapsulationKey {
         let ephemeral_bytes: [u8; 56] = eseed[32..88]
             .try_into()
             .expect("eseed last 56 bytes invalid");
-        let ct_x = x448(ephemeral_bytes, BASEPOINT).unwrap();
+        let ct_x = x448(ephemeral_bytes, X448_BASEPOINT_BYTES).unwrap();
         let mut ss_x_full = x448(ephemeral_bytes, self.pk_x).unwrap();
 
         let ct_x_reduced = Sha3_256::digest(&ct_x);
         let pk_x_reduced = Sha3_256::digest(&self.pk_x);
-        let ss_x = Sha3_256::digest(&ss_x_full);
+        let ss_x = hash_to_32(&ss_x_full);
 
         let ss = combiner(
             &ss_m,
@@ -233,7 +230,7 @@ impl DecapsulationKey {
             .try_into()
             .map_err(|_| crate::Error::ArraySizeError)?;
 
-        let pk_x = x448(x_bytes, BASEPOINT).unwrap();
+        let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
 
         Ok(EncapsulationKey {
             pk_m: pk_m_bytes,
@@ -250,10 +247,10 @@ impl DecapsulationKey {
 
         let mut ss_x_full = x448(x_bytes, ct.ct_x).unwrap();
 
-        let pk_x = x448(x_bytes, BASEPOINT).unwrap();
-        let ct_x_reduced = Sha3_256::digest(&ct.ct_x);
-        let pk_x_reduced = Sha3_256::digest(&pk_x);
-        let mut ss_x = Sha3_256::digest(&ss_x_full);
+        let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
+        let ct_x_reduced = hash_to_32(&ct.ct_x);
+        let pk_x_reduced = hash_to_32(&pk_x);
+        let mut ss_x = hash_to_32(&ss_x_full);
 
         let ss = combiner(
             &ss_m,
