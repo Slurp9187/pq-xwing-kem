@@ -1,10 +1,10 @@
 //! Unit tests for xwing1024.
 
-use pq_xwing_kem::Error;
-use pq_xwing_kem::xwing1024::{
-    Ciphertext, EncapsulationKey, XWING1024_CIPHERTEXT_SIZE, XWING1024_ENCAPSULATION_KEY_SIZE,
-    generate_keypair,
+use pq_xwing_kem::mlkem1024x25519::{
+    generate_keypair, Ciphertext, EncapsulationKey, XWING1024_CIPHERTEXT_SIZE,
+    XWING1024_ENCAPSULATION_KEY_SIZE,
 };
+use pq_xwing_kem::Error;
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
 

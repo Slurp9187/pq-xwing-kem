@@ -1,17 +1,17 @@
 // src/xwing_kem_768.rs
 
-use crate::SharedSecret;
 use crate::combiner;
 use crate::consts::{MASTER_SEED_SIZE, X25519_KEY_SIZE};
 use crate::error::Result;
+use crate::SharedSecret;
 
 use libcrux_ml_kem::mlkem768::{
-    MlKem768Ciphertext, MlKem768KeyPair, MlKem768PublicKey, decapsulate, encapsulate,
-    generate_key_pair,
+    decapsulate, encapsulate, generate_key_pair, MlKem768Ciphertext, MlKem768KeyPair,
+    MlKem768PublicKey,
 };
 
-use sha3::Shake256;
 use sha3::digest::{ExtendableOutput, Update, XofReader};
+use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 

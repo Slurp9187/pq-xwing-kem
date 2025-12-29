@@ -1,5 +1,5 @@
 // tests/cross_crate_tests.rs
-use pq_xwing_kem::xwing768::EncapsulationKey as MyPK;
+use pq_xwing_kem::mlkem768x25519::EncapsulationKey as MyPK;
 use rand_core::{CryptoRng, RngCore, impls};
 use x_wing::{Decapsulate, Encapsulate};
 

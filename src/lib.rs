@@ -32,9 +32,9 @@ extern crate alloc;
 pub mod combiner;
 pub mod consts;
 pub mod error;
+pub mod mlkem1024x25519;
 pub mod mlkem1024x448;
-pub mod xwing1024;
-pub mod xwing768;
+pub mod mlkem768x25519;
 
 pub(crate) use combiner::combiner;
 

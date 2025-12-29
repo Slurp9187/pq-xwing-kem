@@ -1,6 +1,6 @@
 // tests/derand_tests.rs
 
-use pq_xwing_kem::xwing768::{DecapsulationKey, EncapsulationKey};
+use pq_xwing_kem::mlkem768x25519::{DecapsulationKey, EncapsulationKey};
 
 #[test]
 fn test_derandomized_encapsulation() {

@@ -1,5 +1,5 @@
 // tests/determinism_tests.rs
-use pq_xwing_kem::xwing768::{DecapsulationKey, EncapsulationKey};
+use pq_xwing_kem::mlkem768x25519::{DecapsulationKey, EncapsulationKey};
 
 const FIXED_SEED: [u8; 32] = [0x42; 32];
 const FIXED_ESEED: [u8; 64] = [0x99; 64];

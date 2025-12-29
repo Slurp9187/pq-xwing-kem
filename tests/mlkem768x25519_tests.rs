@@ -1,10 +1,10 @@
 //! Unit tests for xwing768.
 
-use pq_xwing_kem::Error;
-use pq_xwing_kem::xwing768::{
-    Ciphertext, EncapsulationKey, XWING768_CIPHERTEXT_SIZE, XWING768_ENCAPSULATION_KEY_SIZE,
-    generate_keypair,
+use pq_xwing_kem::mlkem768x25519::{
+    generate_keypair, Ciphertext, EncapsulationKey, XWING768_CIPHERTEXT_SIZE,
+    XWING768_ENCAPSULATION_KEY_SIZE,
 };
+use pq_xwing_kem::Error;
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
 
