@@ -37,6 +37,7 @@ pub trait DhTrait<const SECRET_SIZE: usize, const PUBLIC_SIZE: usize, const SHAR
         let mut bytes = [0u8; SECRET_SIZE];
         rng.fill_bytes(&mut bytes);
         let secret = Self::clamp_secret(bytes);
+        bytes.zeroize();
         let public = Self::public_from_secret(&secret);
         (secret, public)
     }
