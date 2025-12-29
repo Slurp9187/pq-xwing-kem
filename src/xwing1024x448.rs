@@ -80,8 +80,8 @@ impl EncapsulationKey {
         let ct_x = x448(ephemeral_bytes, X448_BASEPOINT_BYTES).unwrap();
         let mut ss_x_full = x448(ephemeral_bytes, self.pk_x).unwrap();
 
-        let ct_x_reduced = hash_to_32(&ct_x);
-        let pk_x_reduced = hash_to_32(&self.pk_x);
+        let mut ct_x_reduced = hash_to_32(&ct_x);
+        let mut pk_x_reduced = hash_to_32(&self.pk_x);
         let mut ss_x = Sha3_256::digest(&ss_x_full);
         let ss = combiner(
             &ss_m,
@@ -92,7 +92,10 @@ impl EncapsulationKey {
 
         ss_m.zeroize();
         ss_x.zeroize();
+        ct_x_reduced.zeroize();
+        pk_x_reduced.zeroize();
         ss_x_full.zeroize();
+        ephemeral_bytes.zeroize();
 
         Ok((
             Ciphertext {
@@ -115,7 +118,7 @@ impl EncapsulationKey {
 
     /// Deterministic generation from 32-byte seed
     pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
-        let (kp, x_bytes) = expand_seed(seed);
+        let (kp, mut x_bytes) = expand_seed(seed);
         let pk_m_bytes: [u8; MLKEM1024_PK_SIZE] = kp
             .public_key()
             .as_ref()
@@ -123,6 +126,7 @@ impl EncapsulationKey {
             .expect("ML-KEM public key size mismatch");
 
         let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
+        x_bytes.zeroize();
 
         Self::from_components(pk_m_bytes, pk_x)
     }
@@ -150,15 +154,15 @@ impl EncapsulationKey {
             .expect("ML-KEM ciphertext size mismatch");
 
         // Last 56 bytes → X448 ephemeral secret
-        let ephemeral_bytes: [u8; 56] = eseed[32..88]
+        let mut ephemeral_bytes: [u8; 56] = eseed[32..88]
             .try_into()
             .expect("eseed last 56 bytes invalid");
         let ct_x = x448(ephemeral_bytes, X448_BASEPOINT_BYTES).unwrap();
         let mut ss_x_full = x448(ephemeral_bytes, self.pk_x).unwrap();
 
-        let ct_x_reduced = Sha3_256::digest(&ct_x);
-        let pk_x_reduced = Sha3_256::digest(&self.pk_x);
-        let ss_x = hash_to_32(&ss_x_full);
+        let mut ct_x_reduced = Sha3_256::digest(&ct_x);
+        let mut pk_x_reduced = Sha3_256::digest(&self.pk_x);
+        let mut ss_x = hash_to_32(&ss_x_full);
 
         let ss = combiner(
             &ss_m,
@@ -167,7 +171,11 @@ impl EncapsulationKey {
             &pk_x_reduced.into(),
         );
 
+        ss_x.zeroize();
+        ct_x_reduced.zeroize();
+        pk_x_reduced.zeroize();
         ss_x_full.zeroize();
+        ephemeral_bytes.zeroize();
 
         (
             Ciphertext {
@@ -223,7 +231,7 @@ impl DecapsulationKey {
     }
 
     pub fn encapsulation_key(&self) -> crate::Result<EncapsulationKey> {
-        let (kp, x_bytes) = expand_seed(&self.seed);
+        let (kp, mut x_bytes) = expand_seed(&self.seed);
         let pk_m_bytes: [u8; MLKEM1024_PK_SIZE] = kp
             .public_key()
             .as_ref()
@@ -231,6 +239,7 @@ impl DecapsulationKey {
             .map_err(|_| crate::Error::ArraySizeError)?;
 
         let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
+        x_bytes.zeroize();
 
         Ok(EncapsulationKey {
             pk_m: pk_m_bytes,
@@ -239,7 +248,7 @@ impl DecapsulationKey {
     }
 
     pub fn decapsulate(&self, ct: &Ciphertext) -> Result<SharedSecret> {
-        let (kp, x_bytes) = expand_seed(&self.seed);
+        let (kp, mut x_bytes) = expand_seed(&self.seed);
 
         let sk_m = kp.private_key();
         let ct_m = MlKem1024Ciphertext::from(ct.ct_m);
@@ -248,8 +257,9 @@ impl DecapsulationKey {
         let mut ss_x_full = x448(x_bytes, ct.ct_x).unwrap();
 
         let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
-        let ct_x_reduced = hash_to_32(&ct.ct_x);
-        let pk_x_reduced = hash_to_32(&pk_x);
+        x_bytes.zeroize();
+        let mut ct_x_reduced = hash_to_32(&ct.ct_x);
+        let mut pk_x_reduced = hash_to_32(&pk_x);
         let mut ss_x = hash_to_32(&ss_x_full);
 
         let ss = combiner(
@@ -261,6 +271,8 @@ impl DecapsulationKey {
 
         ss_m.zeroize();
         ss_x.zeroize();
+        ct_x_reduced.zeroize();
+        pk_x_reduced.zeroize();
         ss_x_full.zeroize();
 
         Ok(ss)
