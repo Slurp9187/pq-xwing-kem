@@ -112,14 +112,14 @@ fn test_ciphertext_size() {
 }
 
 #[test]
-fn test_invalid_x448_public_key_validation() {
-    // Test that all-zero X448 public key is rejected
+fn test_invalid_x25519_public_key_validation() {
+    // Test that all-zero X25519 public key is rejected
     let mut invalid_pk_bytes = [0u8; XWING1024_ENCAPSULATION_KEY_SIZE];
     // First 1568 bytes are ML-KEM key (leave as zeros for this test)
-    // Last 32 bytes are X448 public key - set to all zeros (invalid)
-    invalid_pk_bytes[XWING1024_ENCAPSULATION_KEY_SIZE - 56..].fill(0);
+    // Last 32 bytes are X25519 public key - set to all zeros (invalid)
+    invalid_pk_bytes[XWING1024_ENCAPSULATION_KEY_SIZE - 32..].fill(0);
 
     let result = EncapsulationKey::try_from(&invalid_pk_bytes);
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), Error::InvalidX448PublicKey));
+    assert!(matches!(result.unwrap_err(), Error::InvalidX25519PublicKey));
 }
