@@ -1,7 +1,7 @@
 //! Unit tests for combiner.
 
 use pq_xwing_kem::combiner::combiner;
-use pq_xwing_kem::consts::SHARED_SECRET_SIZE;
+use pq_xwing_kem::SHARED_SECRET_SIZE;
 use sha3::{Digest, Sha3_256};
 
 #[test]

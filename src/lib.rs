@@ -30,7 +30,6 @@
 extern crate alloc;
 
 pub mod combiner;
-pub mod consts;
 pub mod error;
 pub mod mlkem1024x25519;
 pub mod mlkem1024x448;
@@ -40,7 +39,9 @@ pub(crate) use combiner::combiner;
 
 pub const XWING_DRAFT_VERSION: &str = "09";
 
-pub use consts::{MASTER_SEED_SIZE, SHARED_SECRET_SIZE};
+pub const MASTER_SEED_SIZE: usize = 32;
+pub const SHARED_SECRET_SIZE: usize = 32;
+
 pub use error::{Error, Result};
 
 /// The shared secret produced by X-Wing KEM encapsulation or decapsulation.

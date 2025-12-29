@@ -1,7 +1,6 @@
 // src/xwing_kem_768.rs
 
 use crate::combiner;
-use crate::consts::{MASTER_SEED_SIZE, X25519_KEY_SIZE};
 use crate::error::Result;
 use crate::SharedSecret;
 
@@ -15,6 +14,8 @@ use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+const X25519_KEY_SIZE: usize = 32;
+const MASTER_SEED_SIZE: usize = 32;
 const MLKEM768_PK_SIZE: usize = 1184;
 pub const MLKEM768_CT_SIZE: usize = 1088;
 

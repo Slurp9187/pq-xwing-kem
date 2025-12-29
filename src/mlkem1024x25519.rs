@@ -5,21 +5,22 @@
 //! - X25519: 128-bit security from classical DH
 //! - Combined: ~256-bit post-quantum security
 
-use crate::SharedSecret;
 use crate::combiner;
-use crate::consts::{MASTER_SEED_SIZE, X25519_KEY_SIZE};
 use crate::error::Result;
+use crate::SharedSecret;
 
 use libcrux_ml_kem::mlkem1024::{
-    MlKem1024Ciphertext, MlKem1024KeyPair, MlKem1024PublicKey, decapsulate, encapsulate,
-    generate_key_pair,
+    decapsulate, encapsulate, generate_key_pair, MlKem1024Ciphertext, MlKem1024KeyPair,
+    MlKem1024PublicKey,
 };
 
-use sha3::Shake256;
 use sha3::digest::{ExtendableOutput, Update, XofReader};
+use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+const MASTER_SEED_SIZE: usize = 32;
+const X25519_KEY_SIZE: usize = 32;
 const MLKEM1024_PK_SIZE: usize = 1568;
 pub const MLKEM1024_CT_SIZE: usize = 1568;
 

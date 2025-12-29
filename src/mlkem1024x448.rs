@@ -6,7 +6,6 @@
 //! - Combined: ~256-bit post-quantum security
 
 use crate::combiner;
-use crate::consts::{MASTER_SEED_SIZE, X448_KEY_SIZE};
 use crate::error::Result;
 use crate::SharedSecret;
 
@@ -27,6 +26,8 @@ const BASEPOINT: [u8; 56] = [
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 ];
 
+const MASTER_SEED_SIZE: usize = 32;
+const X448_KEY_SIZE: usize = 56;
 const MLKEM1024_PK_SIZE: usize = 1568;
 pub const MLKEM1024_CT_SIZE: usize = 1568;
 
