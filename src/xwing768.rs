@@ -1,17 +1,17 @@
 // src/xwing_kem_768.rs
 
+use crate::SharedSecret;
 use crate::combiner;
 use crate::consts::{MASTER_SEED_SIZE, X25519_KEY_SIZE};
 use crate::error::Result;
-use crate::SharedSecret;
 
 use libcrux_ml_kem::mlkem768::{
-    decapsulate, encapsulate, generate_key_pair, MlKem768Ciphertext, MlKem768KeyPair,
-    MlKem768PublicKey,
+    MlKem768Ciphertext, MlKem768KeyPair, MlKem768PublicKey, decapsulate, encapsulate,
+    generate_key_pair,
 };
 
-use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
+use sha3::digest::{ExtendableOutput, Update, XofReader};
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -22,7 +22,7 @@ pub const XWING768_ENCAPSULATION_KEY_SIZE: usize = MLKEM768_PK_SIZE + X25519_KEY
 pub const XWING768_DECAPSULATION_KEY_SIZE: usize = X25519_KEY_SIZE;
 pub const XWING768_CIPHERTEXT_SIZE: usize = MLKEM768_CT_SIZE + X25519_KEY_SIZE;
 
-#[derive(Clone, Debug, PartialEq, ZeroizeOnDrop)]
+#[derive(Clone, Debug, PartialEq, Eq, ZeroizeOnDrop)]
 pub struct EncapsulationKey {
     pk_m: [u8; MLKEM768_PK_SIZE],
     pk_x: PublicKey,
@@ -52,6 +52,10 @@ impl EncapsulationKey {
         &self,
         rng: &mut R,
     ) -> Result<(Ciphertext, SharedSecret)> {
+        // Generate ephemeral X25519 keypair using manual bytes to avoid rand_core version conflicts
+        let mut ephemeral_bytes = [0u8; 32];
+        rng.fill_bytes(&mut ephemeral_bytes);
+        let ephemeral: EphemeralSecret = unsafe { std::mem::transmute(ephemeral_bytes) };
         let pk_m = MlKem768PublicKey::from(self.pk_m);
         let mut ml_rand = [0u8; 32];
         rng.fill_bytes(&mut ml_rand);
@@ -64,7 +68,6 @@ impl EncapsulationKey {
 
         ml_rand.zeroize();
 
-        let ephemeral = EphemeralSecret::random_from_rng(rng);
         let ct_x = PublicKey::from(&ephemeral);
         let mut ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
 
@@ -107,6 +110,50 @@ impl EncapsulationKey {
         let pk_x = PublicKey::from(&sk_x);
 
         Self::from_components(pk_m_bytes, pk_x)
+    }
+
+    /// Deterministic encapsulation using a fixed 64-byte encapsulation seed.
+    ///
+    /// The `eseed` is interpreted as:
+    /// - First 32 bytes: randomness for ML-KEM-768 encapsulation
+    /// - Last 32 bytes:  X25519 ephemeral secret key
+    ///
+    /// This allows reproducible known-answer tests (KATs) and matches the
+    /// derandomized encapsulation used in test vectors.
+    pub fn encapsulate_derand(&self, eseed: &[u8; 64]) -> (Ciphertext, SharedSecret) {
+        let pk_m = MlKem768PublicKey::from(self.pk_m);
+
+        // First 32 bytes → ML-KEM randomness
+        let ml_rand: [u8; 32] = eseed[0..32]
+            .try_into()
+            .expect("eseed first 32 bytes invalid");
+        let (ct_m, ss_m) = encapsulate(&pk_m, ml_rand);
+
+        let ct_m_bytes: [u8; MLKEM768_CT_SIZE] = ct_m
+            .as_ref()
+            .try_into()
+            .expect("ML-KEM ciphertext size mismatch");
+
+        // Last 32 bytes → X25519 ephemeral secret
+        let ephemeral_bytes: [u8; 32] = eseed[32..64]
+            .try_into()
+            .expect("eseed last 32 bytes invalid");
+        let ephemeral = StaticSecret::from(ephemeral_bytes);
+        let ct_x = PublicKey::from(&ephemeral);
+        let ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
+
+        let ct_x_bytes = ct_x.to_bytes();
+        let pk_x_bytes = self.pk_x.to_bytes();
+
+        let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
+
+        (
+            Ciphertext {
+                ct_m: ct_m_bytes,
+                ct_x,
+            },
+            ss,
+        )
     }
 }
 

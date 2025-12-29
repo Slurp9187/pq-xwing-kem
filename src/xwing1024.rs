@@ -5,29 +5,30 @@
 //! - X448: 224-bit security from classical DH
 //! - Combined: ~224-bit post-quantum security
 
+use crate::SharedSecret;
 use crate::combiner;
 use crate::consts::{MASTER_SEED_SIZE, X448_KEY_SIZE};
 use crate::error::{Error, Result};
-use crate::SharedSecret;
 
 use libcrux_ml_kem::mlkem1024::{
-    decapsulate, encapsulate, generate_key_pair, MlKem1024Ciphertext, MlKem1024KeyPair,
-    MlKem1024PublicKey,
+    MlKem1024Ciphertext, MlKem1024KeyPair, MlKem1024PublicKey, decapsulate, encapsulate,
+    generate_key_pair,
 };
 
 use rand_core::{CryptoRng, RngCore};
 use sha3::digest::{ExtendableOutput, Update, XofReader};
-use sha3::{Shake256, Sha3_256, Digest};
-use x448::{PublicKey, Secret};
+use sha3::{Digest, Sha3_256, Shake256};
+use x448::{PublicKey, StaticSecret as Secret};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 const MLKEM1024_PK_SIZE: usize = 1568;
 pub const MLKEM1024_CT_SIZE: usize = 1568;
 
 pub const XWING1024_ENCAPSULATION_KEY_SIZE: usize = MLKEM1024_PK_SIZE + X448_KEY_SIZE;
-pub const XWING1024_DECAPSULATION_KEY_SIZE: usize = MASTER_SEED_SIZE;  // 32 bytes master seed
+pub const XWING1024_DECAPSULATION_KEY_SIZE: usize = MASTER_SEED_SIZE;
 pub const XWING1024_CIPHERTEXT_SIZE: usize = MLKEM1024_CT_SIZE + X448_KEY_SIZE;
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct EncapsulationKey {
     pk_m: [u8; MLKEM1024_PK_SIZE],
     pk_x: PublicKey,
@@ -38,19 +39,13 @@ pub struct DecapsulationKey {
     seed: [u8; MASTER_SEED_SIZE],
 }
 
-impl DecapsulationKey {
-}
-
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Ciphertext {
     ct_m: [u8; MLKEM1024_CT_SIZE],
     ct_x: PublicKey,
 }
 
 impl EncapsulationKey {
-    /// Deterministic generation from 32-byte seed (matching xwing768.rs API)
-    /// Deterministic generation from 32-byte seed (matching xwing768.rs API)
-    /// This method intentionally removed - use DecapsulationKey::from_seed() + encapsulation_key() instead
-
     pub fn to_bytes(&self) -> [u8; XWING1024_ENCAPSULATION_KEY_SIZE] {
         let mut buffer = [0u8; XWING1024_ENCAPSULATION_KEY_SIZE];
         buffer[..MLKEM1024_PK_SIZE].copy_from_slice(&self.pk_m);
@@ -58,28 +53,27 @@ impl EncapsulationKey {
         buffer
     }
 
-pub fn encapsulate<R: RngCore + CryptoRng>(
-    &self,
-    rng: &mut R,
-) -> Result<(Ciphertext, SharedSecret)> {
-    let pk_m = MlKem1024PublicKey::from(self.pk_m);
-    let mut ml_rand = [0u8; 32];
-    rng.fill_bytes(&mut ml_rand);
-    let (ct_m, mut ss_m) = encapsulate(&pk_m, ml_rand);
+    pub fn encapsulate<R: RngCore + CryptoRng>(
+        &self,
+        rng: &mut R,
+    ) -> Result<(Ciphertext, SharedSecret)> {
+        let pk_m = MlKem1024PublicKey::from(self.pk_m);
+        let mut ml_rand = [0u8; 32];
+        rng.fill_bytes(&mut ml_rand);
+        let (ct_m, mut ss_m) = encapsulate(&pk_m, ml_rand);
 
-    let ct_m_bytes: [u8; MLKEM1024_CT_SIZE] = ct_m
-        .as_ref()
-        .try_into()
-        .map_err(|_| Error::ArraySizeError)?;
+        let ct_m_bytes: [u8; MLKEM1024_CT_SIZE] = ct_m
+            .as_ref()
+            .try_into()
+            .map_err(|_| Error::ArraySizeError)?;
 
-    ml_rand.zeroize();
+        ml_rand.zeroize();
 
-    // Generate ephemeral X448 keypair using a fixed-size buffer to avoid trait conflicts
-    let mut ephemeral_bytes = [0u8; 56];
-    rng.fill_bytes(&mut ephemeral_bytes);
-    let ephemeral = Secret::from(ephemeral_bytes);
+        let mut ephemeral_bytes = [0u8; 56];
+        rng.fill_bytes(&mut ephemeral_bytes);
+        let ephemeral = Secret::from(ephemeral_bytes);
         let ct_x = PublicKey::from(&ephemeral);
-        let ss_x = ephemeral.as_diffie_hellman(&self.pk_x).expect("DH computation failed");
+        let ss_x = ephemeral.diffie_hellman(&self.pk_x);
         let ss_x_bytes = *ss_x.as_bytes();
         let mut ss_x = hash_x448_key_to_32(&ss_x_bytes);
 
@@ -127,12 +121,14 @@ impl TryFrom<&[u8; XWING1024_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
         let mut pk_m = [0u8; MLKEM1024_PK_SIZE];
         pk_m.copy_from_slice(&bytes[..MLKEM1024_PK_SIZE]);
 
-        let pk_x_bytes: [u8; 56] = bytes[MLKEM1024_PK_SIZE..].try_into().map_err(|_| Error::ArraySizeError)?;
+        let pk_x_bytes: [u8; 56] = bytes[MLKEM1024_PK_SIZE..]
+            .try_into()
+            .map_err(|_| Error::ArraySizeError)?;
         let pk_x = PublicKey::from_bytes(&pk_x_bytes).ok_or(Error::InvalidX448PublicKey)?;
 
-        // Validate ML-KEM public key by attempting to create it and test basic functionality
+        // Validate ML-KEM public key
         let mlkem_pk = MlKem1024PublicKey::from(pk_m);
-        let _pk_bytes = mlkem_pk.as_ref();
+        let _ = mlkem_pk.as_ref();
 
         Ok(Self { pk_m, pk_x })
     }
@@ -172,9 +168,9 @@ impl DecapsulationKey {
 
         let sk_m = kp.private_key();
         let ct_m = MlKem1024Ciphertext::from(*ct.ct_m());
-        let mut ss_m = decapsulate(sk_m, &ct_m);
+        let mut ss_m = decapsulate(&sk_m, &ct_m);
 
-        let ss_x = x_secret.as_diffie_hellman(&ct.ct_x).expect("DH computation failed");
+        let ss_x = x_secret.diffie_hellman(&ct.ct_x);
         let ss_x_bytes = *ss_x.as_bytes();
         let mut ss_x = hash_x448_key_to_32(&ss_x_bytes);
 
@@ -189,7 +185,6 @@ impl DecapsulationKey {
 
         Ok(ss)
     }
-
 }
 
 impl Ciphertext {
@@ -208,7 +203,9 @@ impl TryFrom<&[u8; XWING1024_CIPHERTEXT_SIZE]> for Ciphertext {
         let mut ct_m = [0u8; MLKEM1024_CT_SIZE];
         ct_m.copy_from_slice(&bytes[..MLKEM1024_CT_SIZE]);
 
-        let ct_x_bytes: [u8; 56] = bytes[MLKEM1024_CT_SIZE..].try_into().map_err(|_| Error::ArraySizeError)?;
+        let ct_x_bytes: [u8; 56] = bytes[MLKEM1024_CT_SIZE..]
+            .try_into()
+            .map_err(|_| Error::ArraySizeError)?;
         let ct_x = PublicKey::from_bytes(&ct_x_bytes).ok_or(Error::InvalidX448PublicKey)?;
 
         Ok(Self { ct_m, ct_x })
@@ -237,12 +234,8 @@ pub fn generate_keypair<R: RngCore + CryptoRng>(
     Ok((sk, pk))
 }
 
-/// Hash an X448 key (56 bytes) to 32 bytes for combiner compatibility with X25519 variants
 fn hash_x448_key_to_32(key_bytes: &[u8; 56]) -> [u8; 32] {
-    Sha3_256::new()
-        .chain_update(key_bytes)
-        .finalize()
-        .into()
+    Sha3_256::new().chain_update(key_bytes).finalize().into()
 }
 
 fn expand_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Result<(MlKem1024KeyPair, Secret)> {
@@ -250,18 +243,14 @@ fn expand_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Result<(MlKem1024KeyPair, Secre
     hasher.update(seed);
     let mut reader = hasher.finalize_xof();
 
-    // Draft-09: expand to 120 bytes using SHAKE256 (64 for ML-KEM + 56 for X448)
     let mut expanded = [0u8; 120];
     reader.read(&mut expanded);
 
-    // ML-KEM-1024.KeyGen_internal(expanded[0:32], expanded[32:64])
-    // libcrux expects concatenated d || z, so we provide the first 64 bytes
     let mut ml_seed = [0u8; 64];
     ml_seed.copy_from_slice(&expanded[..64]);
     let kp = generate_key_pair(ml_seed);
     ml_seed.zeroize();
 
-    // X448 secret key from expanded[64:120]
     let mut x_bytes = [0u8; 56];
     x_bytes.copy_from_slice(&expanded[64..120]);
     let x_secret = Secret::from(x_bytes);
