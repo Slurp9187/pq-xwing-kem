@@ -1,0 +1,208 @@
+   Compiling pq-xwing-kem v0.1.0 (C:\Users\chadm\Projects\pq-xwing-kem)
+error[E0599]: no method named `to_bytes` found for enum `Result<T, E>` in the current scope
+  --> tests\determinism_tests.rs:22:20
+   |
+22 |     assert_eq!(pk1.to_bytes().as_slice(), pk2.to_bytes().as_slice());
+   |                    ^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+   |
+note: the method `to_bytes` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+  --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:45:5
+   |
+45 |     pub fn to_bytes(&self) -> [u8; XWING768X25519_ENCAPSULATION_KEY_SIZE] {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+   |
+22 |     assert_eq!(pk1.expect("REASON").to_bytes().as_slice(), pk2.to_bytes().as_slice());
+   |                   +++++++++++++++++
+
+error[E0599]: no method named `encapsulate_derand` found for enum `Result<T, E>` in the current scope
+   --> tests\derand_tests.rs:11:23
+    |
+ 11 |     let (ct, ss) = pk.encapsulate_derand(&eseed);
+    |                       ^^^^^^^^^^^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+    |
+note: the method `encapsulate_derand` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+   --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:128:5
+    |
+128 | /     pub fn encapsulate_derand(
+129 | |         &self,
+130 | |         eseed: &[u8; 64],
+131 | |     ) -> crate::Result<(Ciphertext, SharedSecret)> {
+    | |__________________________________________________^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+    |
+ 11 |     let (ct, ss) = pk.expect("REASON").encapsulate_derand(&eseed);
+    |                      +++++++++++++++++
+
+For more information about this error, try `rustc --explain E0599`.
+error[E0599]: no method named `to_bytes` found for enum `Result<T, E>` in the current scope
+  --> tests\determinism_tests.rs:22:47
+   |
+22 |     assert_eq!(pk1.to_bytes().as_slice(), pk2.to_bytes().as_slice());
+   |                                               ^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+   |
+note: the method `to_bytes` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+  --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:45:5
+   |
+45 |     pub fn to_bytes(&self) -> [u8; XWING768X25519_ENCAPSULATION_KEY_SIZE] {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+   |
+22 |     assert_eq!(pk1.to_bytes().as_slice(), pk2.expect("REASON").to_bytes().as_slice());
+   |                                              +++++++++++++++++
+
+error: could not compile `pq-xwing-kem` (test "derand_tests") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error[E0599]: no method named `to_bytes` found for enum `Result<T, E>` in the current scope
+  --> tests\determinism_tests.rs:23:21
+   |
+23 |     assert_eq!(&pk1.to_bytes()[..32], EXPECTED_PK_FIRST_32);
+   |                     ^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+   |
+note: the method `to_bytes` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+  --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:45:5
+   |
+45 |     pub fn to_bytes(&self) -> [u8; XWING768X25519_ENCAPSULATION_KEY_SIZE] {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+   |
+23 |     assert_eq!(&pk1.expect("REASON").to_bytes()[..32], EXPECTED_PK_FIRST_32);
+   |                    +++++++++++++++++
+
+error[E0599]: no method named `encapsulate_derand` found for enum `Result<T, E>` in the current scope
+   --> tests\cross_crate_tests.rs:40:32
+    |
+ 40 |     let (my_ct, my_ss) = my_pk.encapsulate_derand(&eseed);
+    |                                ^^^^^^^^^^^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+    |
+note: the method `encapsulate_derand` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+   --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:128:5
+    |
+128 | /     pub fn encapsulate_derand(
+129 | |         &self,
+130 | |         eseed: &[u8; 64],
+131 | |     ) -> crate::Result<(Ciphertext, SharedSecret)> {
+    | |__________________________________________________^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+    |
+ 40 |     let (my_ct, my_ss) = my_pk.expect("REASON").encapsulate_derand(&eseed);
+    |                               +++++++++++++++++
+
+error[E0599]: no method named `encapsulate_derand` found for enum `Result<T, E>` in the current scope
+   --> tests\determinism_tests.rs:31:25
+    |
+ 31 |     let (ct1, ss1) = pk.encapsulate_derand(&FIXED_ESEED);
+    |                         ^^^^^^^^^^^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+    |
+note: the method `encapsulate_derand` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+   --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:128:5
+    |
+128 | /     pub fn encapsulate_derand(
+129 | |         &self,
+130 | |         eseed: &[u8; 64],
+131 | |     ) -> crate::Result<(Ciphertext, SharedSecret)> {
+    | |__________________________________________________^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+    |
+ 31 |     let (ct1, ss1) = pk.expect("REASON").encapsulate_derand(&FIXED_ESEED);
+    |                        +++++++++++++++++
+
+error[E0599]: no method named `to_bytes` found for enum `Result<T, E>` in the current scope
+  --> tests\cross_crate_tests.rs:48:22
+   |
+48 |     assert_eq!(my_pk.to_bytes().as_slice(), rc_pk.to_bytes().as_slice());
+   |                      ^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+   |
+note: the method `to_bytes` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+  --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:45:5
+   |
+45 |     pub fn to_bytes(&self) -> [u8; XWING768X25519_ENCAPSULATION_KEY_SIZE] {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+   |
+48 |     assert_eq!(my_pk.expect("REASON").to_bytes().as_slice(), rc_pk.to_bytes().as_slice());
+   |                     +++++++++++++++++
+
+error[E0282]: type annotations needed
+  --> tests\cross_crate_tests.rs:49:16
+   |
+49 |     assert_eq!(my_ct.to_bytes().as_slice(), rc_ct.to_bytes().as_slice());
+   |                ^^^^^ cannot infer type
+
+error[E0599]: no method named `encapsulate_derand` found for enum `Result<T, E>` in the current scope
+   --> tests\determinism_tests.rs:32:25
+    |
+ 32 |     let (ct2, ss2) = pk.encapsulate_derand(&FIXED_ESEED);
+    |                         ^^^^^^^^^^^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+    |
+note: the method `encapsulate_derand` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+   --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:128:5
+    |
+128 | /     pub fn encapsulate_derand(
+129 | |         &self,
+130 | |         eseed: &[u8; 64],
+131 | |     ) -> crate::Result<(Ciphertext, SharedSecret)> {
+    | |__________________________________________________^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+    |
+ 32 |     let (ct2, ss2) = pk.expect("REASON").encapsulate_derand(&FIXED_ESEED);
+    |                        +++++++++++++++++
+
+error[E0282]: type annotations needed
+  --> tests\determinism_tests.rs:34:16
+   |
+34 |     assert_eq!(ct1.to_bytes().as_slice(), ct2.to_bytes().as_slice());
+   |                ^^^ cannot infer type
+
+error[E0282]: type annotations needed
+  --> tests\determinism_tests.rs:34:43
+   |
+34 |     assert_eq!(ct1.to_bytes().as_slice(), ct2.to_bytes().as_slice());
+   |                                           ^^^ cannot infer type
+
+error[E0599]: no method named `to_bytes` found for enum `Result<T, E>` in the current scope
+  --> tests\kat_tests.rs:36:16
+   |
+36 |             pk.to_bytes().as_slice(),
+   |                ^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+   |
+note: the method `to_bytes` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+  --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:45:5
+   |
+45 |     pub fn to_bytes(&self) -> [u8; XWING768X25519_ENCAPSULATION_KEY_SIZE] {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+   |
+36 |             pk.expect("REASON").to_bytes().as_slice(),
+   |               +++++++++++++++++
+
+Some errors have detailed explanations: E0282, E0599.
+For more information about an error, try `rustc --explain E0282`.
+error: could not compile `pq-xwing-kem` (test "cross_crate_tests") due to 3 previous errors
+error: could not compile `pq-xwing-kem` (test "determinism_tests") due to 7 previous errors
+error[E0599]: no method named `encapsulate_derand` found for enum `Result<T, E>` in the current scope
+   --> tests\kat_tests.rs:43:34
+    |
+ 43 |         let (ct, ss_sender) = pk.encapsulate_derand(&vec.eseed);
+    |                                  ^^^^^^^^^^^^^^^^^^ method not found in `Result<pq_xwing_kem::xwing768x25519::EncapsulationKey, pq_xwing_kem::Error>`
+    |
+note: the method `encapsulate_derand` exists on the type `pq_xwing_kem::xwing768x25519::EncapsulationKey`
+   --> C:\Users\chadm\Projects\pq-xwing-kem\src\xwing768x25519.rs:128:5
+    |
+128 | /     pub fn encapsulate_derand(
+129 | |         &self,
+130 | |         eseed: &[u8; 64],
+131 | |     ) -> crate::Result<(Ciphertext, SharedSecret)> {
+    | |__________________________________________________^
+help: consider using `Result::expect` to unwrap the `pq_xwing_kem::xwing768x25519::EncapsulationKey` value, panicking if the value is a `Result::Err`
+    |
+ 43 |         let (ct, ss_sender) = pk.expect("REASON").encapsulate_derand(&vec.eseed);
+    |                                 +++++++++++++++++
+
+error[E0282]: type annotations needed
+  --> tests\kat_tests.rs:47:13
+   |
+47 |             ct.to_bytes().as_slice(),
+   |             ^^ cannot infer type
+
+error: could not compile `pq-xwing-kem` (test "kat_tests") due to 3 previous errors

@@ -28,7 +28,7 @@ fn test_official_kat_vectors() {
         println!("Testing vector {}", i);
 
         // 1. Generate key pair from seed
-        let pk = EncapsulationKey::from_seed(&vec.seed);
+        let pk = EncapsulationKey::from_seed(&vec.seed).expect("Failed to generate key from seed");
         let sk = DecapsulationKey::from_seed(&vec.seed);
 
         // 2. Check public key matches
@@ -40,7 +40,9 @@ fn test_official_kat_vectors() {
         );
 
         // 3. Deterministic encapsulation
-        let (ct, ss_sender) = pk.encapsulate_derand(&vec.eseed);
+        let (ct, ss_sender) = pk
+            .encapsulate_derand(&vec.eseed)
+            .expect("Failed to encapsulate derand");
 
         // 4. Check ciphertext and shared secret
         assert_eq!(

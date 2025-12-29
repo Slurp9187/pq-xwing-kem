@@ -36,8 +36,10 @@ fn cross_check_with_rustcrypto_xwing() {
     let seed = [0x42u8; 32];
     let eseed = [0x99u8; 64];
 
-    let my_pk = MyPK::from_seed(&seed);
-    let (my_ct, my_ss) = my_pk.encapsulate_derand(&eseed);
+    let my_pk = MyPK::from_seed(&seed).expect("Failed to generate key from seed");
+    let (my_ct, my_ss) = my_pk
+        .encapsulate_derand(&eseed)
+        .expect("Failed to encapsulate derand");
 
     let mut key_rng = SeedRng { data: &seed };
     let (rc_sk, rc_pk) = x_wing::generate_key_pair(&mut key_rng);

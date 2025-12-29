@@ -16,8 +16,8 @@ const EXPECTED_PK_FIRST_32: [u8; 32] = [
 
 #[test]
 fn test_deterministic_key_generation() {
-    let pk1 = EncapsulationKey::from_seed(&FIXED_SEED);
-    let pk2 = EncapsulationKey::from_seed(&FIXED_SEED);
+    let pk1 = EncapsulationKey::from_seed(&FIXED_SEED).expect("Failed to generate key from seed");
+    let pk2 = EncapsulationKey::from_seed(&FIXED_SEED).expect("Failed to generate key from seed");
 
     assert_eq!(pk1.to_bytes().as_slice(), pk2.to_bytes().as_slice());
     assert_eq!(&pk1.to_bytes()[..32], EXPECTED_PK_FIRST_32);
@@ -25,11 +25,15 @@ fn test_deterministic_key_generation() {
 
 #[test]
 fn test_full_deterministic_flow() {
-    let pk = EncapsulationKey::from_seed(&FIXED_SEED);
+    let pk = EncapsulationKey::from_seed(&FIXED_SEED).expect("Failed to generate key from seed");
     let sk = DecapsulationKey::from_seed(&FIXED_SEED);
 
-    let (ct1, ss1) = pk.encapsulate_derand(&FIXED_ESEED);
-    let (ct2, ss2) = pk.encapsulate_derand(&FIXED_ESEED);
+    let (ct1, ss1) = pk
+        .encapsulate_derand(&FIXED_ESEED)
+        .expect("Failed to encapsulate derand");
+    let (ct2, ss2) = pk
+        .encapsulate_derand(&FIXED_ESEED)
+        .expect("Failed to encapsulate derand");
 
     assert_eq!(ct1.to_bytes().as_slice(), ct2.to_bytes().as_slice());
     assert_eq!(ss1, ss2);

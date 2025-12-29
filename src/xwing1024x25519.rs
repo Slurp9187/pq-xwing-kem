@@ -107,19 +107,19 @@ impl EncapsulationKey {
     }
 
     /// Deterministic generation from 32-byte seed
-    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
+    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> crate::Result<Self> {
         let (kp, mut x_bytes) = expand_seed(seed);
         let pk_m_bytes: [u8; MLKEM1024_PK_SIZE] = kp
             .public_key()
             .as_ref()
             .try_into()
-            .expect("ML-KEM public key size mismatch");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
 
         let sk_x = StaticSecret::from(x_bytes);
         x_bytes.zeroize();
         let pk_x = PublicKey::from(&sk_x);
 
-        Self::from_components(pk_m_bytes, pk_x)
+        Ok(Self::from_components(pk_m_bytes, pk_x))
     }
 
     /// Deterministic encapsulation using a fixed 64-byte encapsulation seed.
@@ -130,24 +130,27 @@ impl EncapsulationKey {
     ///
     /// This allows reproducible known-answer tests (KATs) and matches the
     /// derandomized encapsulation used in test vectors.
-    pub fn encapsulate_derand(&self, eseed: &[u8; 64]) -> (Ciphertext, SharedSecret) {
+    pub fn encapsulate_derand(
+        &self,
+        eseed: &[u8; 64],
+    ) -> crate::Result<(Ciphertext, SharedSecret)> {
         let pk_m = MlKem1024PublicKey::from(self.pk_m);
 
         // First 32 bytes → ML-KEM randomness
         let ml_rand: [u8; 32] = eseed[0..32]
             .try_into()
-            .expect("eseed first 32 bytes invalid");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
         let (ct_m, ss_m) = encapsulate(&pk_m, ml_rand);
 
         let ct_m_bytes: [u8; MLKEM1024_CT_SIZE] = ct_m
             .as_ref()
             .try_into()
-            .expect("ML-KEM ciphertext size mismatch");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
 
         // Last 32 bytes → X25519 ephemeral secret
         let mut ephemeral_bytes: [u8; 32] = eseed[32..64]
             .try_into()
-            .expect("eseed last 32 bytes invalid");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
         let ephemeral = StaticSecret::from(ephemeral_bytes);
         let ct_x = PublicKey::from(&ephemeral);
         let mut ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
@@ -162,13 +165,13 @@ impl EncapsulationKey {
         pk_x_bytes.zeroize();
         ephemeral_bytes.zeroize();
 
-        (
+        Ok((
             Ciphertext {
                 ct_m: ct_m_bytes,
                 ct_x,
             },
             ss,
-        )
+        ))
     }
 }
 
@@ -178,15 +181,19 @@ impl EncapsulationKey {
     }
 }
 
-impl TryFrom<&[u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+impl TryFrom<&[u8]> for EncapsulationKey {
     type Error = crate::Error;
 
-    fn try_from(bytes: &[u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE]) -> crate::Result<Self> {
+    fn try_from(bytes: &[u8]) -> crate::Result<Self> {
+        if bytes.len() != XWING1024X25519_ENCAPSULATION_KEY_SIZE {
+            return Err(crate::Error::InvalidEncapsulationKeyLength);
+        }
         let mut pk_m = [0u8; MLKEM1024_PK_SIZE];
         pk_m.copy_from_slice(&bytes[..MLKEM1024_PK_SIZE]);
 
-        let pk_x_bytes: [u8; 32] = bytes[MLKEM1024_PK_SIZE..].try_into().unwrap();
-        let pk_x = PublicKey::from(pk_x_bytes);
+        let pk_x_bytes: [u8; 32] = bytes[MLKEM1024_PK_SIZE..]
+            .try_into()
+            .map_err(|_| crate::Error::ArraySizeError)?;
 
         // Validate that pk_x is not the all-zero point (which is invalid for X25519)
         if pk_x_bytes.iter().all(|&b| b == 0) {
@@ -198,7 +205,19 @@ impl TryFrom<&[u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey
         // Test that the key can be used for basic operations by checking it can be converted back
         let _pk_bytes = mlkem_pk.as_ref();
 
-        Ok(Self { pk_m, pk_x })
+        Ok(Self {
+            pk_m,
+            pk_x: pk_x_bytes.into(),
+        })
+    }
+}
+
+// Backward-compatible impl for &[u8; SIZE]
+impl TryFrom<&[u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+    type Error = crate::Error;
+
+    fn try_from(bytes: &[u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE]) -> crate::Result<Self> {
+        Self::try_from(&bytes[..])
     }
 }
 
@@ -219,7 +238,7 @@ impl DecapsulationKey {
             .public_key()
             .as_ref()
             .try_into()
-            .map_err(|_| crate::Error::ArraySizeError)?;
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
 
         let sk_x = StaticSecret::from(x_bytes);
         x_bytes.zeroize();
@@ -281,22 +300,38 @@ impl Ciphertext {
     }
 }
 
-impl TryFrom<&[u8; XWING1024X25519_CIPHERTEXT_SIZE]> for Ciphertext {
+impl TryFrom<&[u8]> for Ciphertext {
     type Error = crate::Error;
 
-    fn try_from(bytes: &[u8; XWING1024X25519_CIPHERTEXT_SIZE]) -> crate::Result<Self> {
+    fn try_from(bytes: &[u8]) -> crate::Result<Self> {
+        if bytes.len() != XWING1024X25519_CIPHERTEXT_SIZE {
+            return Err(crate::Error::InvalidCiphertextLength);
+        }
         let mut ct_m = [0u8; MLKEM1024_CT_SIZE];
         ct_m.copy_from_slice(&bytes[..MLKEM1024_CT_SIZE]);
 
-        let ct_x_bytes: [u8; 32] = bytes[MLKEM1024_CT_SIZE..].try_into().unwrap();
-        let ct_x = PublicKey::from(ct_x_bytes);
+        let ct_x_bytes: [u8; 32] = bytes[MLKEM1024_CT_SIZE..]
+            .try_into()
+            .map_err(|_| crate::Error::ArraySizeError)?;
 
         // Validate that ct_x is not the all-zero point
         if ct_x_bytes.iter().all(|&b| b == 0) {
             return Err(crate::Error::InvalidX25519PublicKey);
         }
 
-        Ok(Self { ct_m, ct_x })
+        Ok(Self {
+            ct_m,
+            ct_x: ct_x_bytes.into(),
+        })
+    }
+}
+
+// Backward-compatible impl for &[u8; SIZE]
+impl TryFrom<&[u8; XWING1024X25519_CIPHERTEXT_SIZE]> for Ciphertext {
+    type Error = crate::Error;
+
+    fn try_from(bytes: &[u8; XWING1024X25519_CIPHERTEXT_SIZE]) -> crate::Result<Self> {
+        Self::try_from(&bytes[..])
     }
 }
 

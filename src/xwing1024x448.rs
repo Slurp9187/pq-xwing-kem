@@ -77,17 +77,19 @@ impl EncapsulationKey {
 
         ml_rand.zeroize();
 
-        let ct_x = x448(ephemeral_bytes, X448_BASEPOINT_BYTES).unwrap();
-        let mut ss_x_full = x448(ephemeral_bytes, self.pk_x).unwrap();
+        let ct_x =
+            x448(ephemeral_bytes, X448_BASEPOINT_BYTES).ok_or(crate::error::Error::X448DhError)?;
+        let mut ss_x_full =
+            x448(ephemeral_bytes, self.pk_x).ok_or(crate::error::Error::X448DhError)?;
 
         let mut ct_x_reduced = hash_to_32(&ct_x);
         let mut pk_x_reduced = hash_to_32(&self.pk_x);
-        let mut ss_x = Sha3_256::digest(&ss_x_full);
+        let mut ss_x = Sha3_256::digest(ss_x_full);
         let ss = combiner(
             &ss_m,
             &ss_x.into(),
-            &ct_x_reduced.into(),
-            &pk_x_reduced.into(),
+            &ct_x_reduced,
+            &pk_x_reduced,
         );
 
         ss_m.zeroize();
@@ -117,18 +119,18 @@ impl EncapsulationKey {
     }
 
     /// Deterministic generation from 32-byte seed
-    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
+    pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> crate::Result<Self> {
         let (kp, mut x_bytes) = expand_seed(seed);
         let pk_m_bytes: [u8; MLKEM1024_PK_SIZE] = kp
             .public_key()
             .as_ref()
             .try_into()
-            .expect("ML-KEM public key size mismatch");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
 
-        let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
+        let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).ok_or(crate::error::Error::X448DhError)?;
         x_bytes.zeroize();
 
-        Self::from_components(pk_m_bytes, pk_x)
+        Ok(Self::from_components(pk_m_bytes, pk_x))
     }
 
     /// Deterministic encapsulation using a fixed 88-byte encapsulation seed.
@@ -139,34 +141,39 @@ impl EncapsulationKey {
     ///
     /// This allows reproducible known-answer tests (KATs) and matches the
     /// derandomized encapsulation used in test vectors.
-    pub fn encapsulate_derand(&self, eseed: &[u8; 88]) -> (Ciphertext, SharedSecret) {
+    pub fn encapsulate_derand(
+        &self,
+        eseed: &[u8; 88],
+    ) -> crate::Result<(Ciphertext, SharedSecret)> {
         let pk_m = MlKem1024PublicKey::from(self.pk_m);
 
         // First 32 bytes → ML-KEM randomness
         let ml_rand: [u8; 32] = eseed[0..32]
             .try_into()
-            .expect("eseed first 32 bytes invalid");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
         let (ct_m, ss_m) = encapsulate(&pk_m, ml_rand);
 
         let ct_m_bytes: [u8; MLKEM1024_CT_SIZE] = ct_m
             .as_ref()
             .try_into()
-            .expect("ML-KEM ciphertext size mismatch");
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
 
         // Last 56 bytes → X448 ephemeral secret
         let mut ephemeral_bytes: [u8; 56] = eseed[32..88]
             .try_into()
-            .expect("eseed last 56 bytes invalid");
-        let ct_x = x448(ephemeral_bytes, X448_BASEPOINT_BYTES).unwrap();
-        let mut ss_x_full = x448(ephemeral_bytes, self.pk_x).unwrap();
+            .map_err(|_| crate::error::Error::ArraySizeError)?;
+        let ct_x =
+            x448(ephemeral_bytes, X448_BASEPOINT_BYTES).ok_or(crate::error::Error::X448DhError)?;
+        let mut ss_x_full =
+            x448(ephemeral_bytes, self.pk_x).ok_or(crate::error::Error::X448DhError)?;
 
-        let mut ct_x_reduced = Sha3_256::digest(&ct_x);
-        let mut pk_x_reduced = Sha3_256::digest(&self.pk_x);
+        let mut ct_x_reduced = Sha3_256::digest(ct_x);
+        let mut pk_x_reduced = Sha3_256::digest(self.pk_x);
         let mut ss_x = hash_to_32(&ss_x_full);
 
         let ss = combiner(
             &ss_m,
-            &ss_x.into(),
+            &ss_x,
             &ct_x_reduced.into(),
             &pk_x_reduced.into(),
         );
@@ -177,13 +184,13 @@ impl EncapsulationKey {
         ss_x_full.zeroize();
         ephemeral_bytes.zeroize();
 
-        (
+        Ok((
             Ciphertext {
                 ct_m: ct_m_bytes,
                 ct_x,
             },
             ss,
-        )
+        ))
     }
 }
 
@@ -193,14 +200,20 @@ impl EncapsulationKey {
     }
 }
 
-impl TryFrom<&[u8; XWING1024X448_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+impl TryFrom<&[u8]> for EncapsulationKey {
     type Error = crate::Error;
 
-    fn try_from(bytes: &[u8; XWING1024X448_ENCAPSULATION_KEY_SIZE]) -> crate::Result<Self> {
+    fn try_from(bytes: &[u8]) -> crate::Result<Self> {
+        if bytes.len() != XWING1024X448_ENCAPSULATION_KEY_SIZE {
+            return Err(crate::Error::InvalidEncapsulationKeyLength);
+        }
+
         let mut pk_m = [0u8; MLKEM1024_PK_SIZE];
         pk_m.copy_from_slice(&bytes[..MLKEM1024_PK_SIZE]);
 
-        let pk_x_bytes: [u8; 56] = bytes[MLKEM1024_PK_SIZE..].try_into().unwrap();
+        let pk_x_bytes: [u8; 56] = bytes[MLKEM1024_PK_SIZE..]
+            .try_into()
+            .map_err(|_| crate::Error::ArraySizeError)?;
 
         // Validate that pk_x is not the all-zero point (which is invalid for X448)
         if pk_x_bytes.iter().all(|&b| b == 0) {
@@ -216,6 +229,15 @@ impl TryFrom<&[u8; XWING1024X448_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
             pk_m,
             pk_x: pk_x_bytes,
         })
+    }
+}
+
+// Backward-compatible impl for &[u8; SIZE]
+impl TryFrom<&[u8; XWING1024X448_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+    type Error = crate::Error;
+
+    fn try_from(bytes: &[u8; XWING1024X448_ENCAPSULATION_KEY_SIZE]) -> crate::Result<Self> {
+        Self::try_from(&bytes[..])
     }
 }
 
@@ -254,9 +276,9 @@ impl DecapsulationKey {
         let ct_m = MlKem1024Ciphertext::from(ct.ct_m);
         let mut ss_m = decapsulate(sk_m, &ct_m);
 
-        let mut ss_x_full = x448(x_bytes, ct.ct_x).unwrap();
+        let mut ss_x_full = x448(x_bytes, ct.ct_x).ok_or(crate::error::Error::X448DhError)?;
 
-        let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).unwrap();
+        let pk_x = x448(x_bytes, X448_BASEPOINT_BYTES).ok_or(crate::error::Error::X448DhError)?;
         x_bytes.zeroize();
         let mut ct_x_reduced = hash_to_32(&ct.ct_x);
         let mut pk_x_reduced = hash_to_32(&pk_x);
@@ -264,9 +286,9 @@ impl DecapsulationKey {
 
         let ss = combiner(
             &ss_m,
-            &ss_x.into(),
-            &ct_x_reduced.into(),
-            &pk_x_reduced.into(),
+            &ss_x,
+            &ct_x_reduced,
+            &pk_x_reduced,
         );
 
         ss_m.zeroize();
@@ -303,14 +325,20 @@ impl Ciphertext {
     }
 }
 
-impl TryFrom<&[u8; XWING1024X448_CIPHERTEXT_SIZE]> for Ciphertext {
+impl TryFrom<&[u8]> for Ciphertext {
     type Error = crate::Error;
 
-    fn try_from(bytes: &[u8; XWING1024X448_CIPHERTEXT_SIZE]) -> crate::Result<Self> {
+    fn try_from(bytes: &[u8]) -> crate::Result<Self> {
+        if bytes.len() != XWING1024X448_CIPHERTEXT_SIZE {
+            return Err(crate::Error::InvalidCiphertextLength);
+        }
+
         let mut ct_m = [0u8; MLKEM1024_CT_SIZE];
         ct_m.copy_from_slice(&bytes[..MLKEM1024_CT_SIZE]);
 
-        let ct_x_bytes: [u8; 56] = bytes[MLKEM1024_CT_SIZE..].try_into().unwrap();
+        let ct_x_bytes: [u8; 56] = bytes[MLKEM1024_CT_SIZE..]
+            .try_into()
+            .map_err(|_| crate::Error::ArraySizeError)?;
 
         // Validate that ct_x is not the all-zero point
         if ct_x_bytes.iter().all(|&b| b == 0) {
@@ -321,6 +349,15 @@ impl TryFrom<&[u8; XWING1024X448_CIPHERTEXT_SIZE]> for Ciphertext {
             ct_m,
             ct_x: ct_x_bytes,
         })
+    }
+}
+
+// Backward-compatible impl for &[u8; SIZE]
+impl TryFrom<&[u8; XWING1024X448_CIPHERTEXT_SIZE]> for Ciphertext {
+    type Error = crate::Error;
+
+    fn try_from(bytes: &[u8; XWING1024X448_CIPHERTEXT_SIZE]) -> crate::Result<Self> {
+        Self::try_from(&bytes[..])
     }
 }
 
