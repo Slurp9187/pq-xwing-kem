@@ -168,7 +168,7 @@ impl DecapsulationKey {
 
         let sk_m = kp.private_key();
         let ct_m = MlKem1024Ciphertext::from(*ct.ct_m());
-        let mut ss_m = decapsulate(&sk_m, &ct_m);
+        let mut ss_m = decapsulate(sk_m, &ct_m);
 
         let ss_x = x_secret.diffie_hellman(&ct.ct_x);
         let ss_x_bytes = *ss_x.as_bytes();

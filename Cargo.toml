@@ -23,7 +23,6 @@ thiserror = "2.0"
 [dev-dependencies]
 hex = { version = "0.4", features = ["serde"] }
 rand_chacha = "0.9"
-# rand_chacha = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 x-wing = {version = "0.1.0-pre.2",features = ["zeroize","os_rng"]}
