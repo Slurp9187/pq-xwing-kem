@@ -7,6 +7,8 @@ target*/
 # Database and temporary files
 *.bak
 *.del
+*.errors
+*.results
 
 # Dependencies and locks
 Cargo.lock
