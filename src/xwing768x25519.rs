@@ -72,12 +72,15 @@ impl EncapsulationKey {
         let ct_x = PublicKey::from(&ephemeral);
         let mut ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
 
-        let ct_x_bytes = ct_x.to_bytes();
-        let pk_x_bytes = self.pk_x.to_bytes();
+        let mut ct_x_bytes = ct_x.to_bytes();
+        let mut pk_x_bytes = self.pk_x.to_bytes();
         let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
 
         ss_m.zeroize();
         ss_x.zeroize();
+        ct_x_bytes.zeroize();
+        pk_x_bytes.zeroize();
+        ephemeral_bytes.zeroize();
 
         Ok((
             Ciphertext {
@@ -100,7 +103,7 @@ impl EncapsulationKey {
 
     /// Deterministic generation from 32-byte seed
     pub fn from_seed(seed: &[u8; MASTER_SEED_SIZE]) -> Self {
-        let (kp, x_bytes) = expand_seed(seed);
+        let (kp, mut x_bytes) = expand_seed(seed);
         let pk_m_bytes: [u8; MLKEM768_PK_SIZE] = kp
             .public_key()
             .as_ref()
@@ -108,6 +111,7 @@ impl EncapsulationKey {
             .expect("ML-KEM public key size mismatch");
 
         let sk_x = StaticSecret::from(x_bytes);
+        x_bytes.zeroize();
         let pk_x = PublicKey::from(&sk_x);
 
         Self::from_components(pk_m_bytes, pk_x)
@@ -136,17 +140,22 @@ impl EncapsulationKey {
             .expect("ML-KEM ciphertext size mismatch");
 
         // Last 32 bytes → X25519 ephemeral secret
-        let ephemeral_bytes: [u8; 32] = eseed[32..64]
+        let mut ephemeral_bytes: [u8; 32] = eseed[32..64]
             .try_into()
             .expect("eseed last 32 bytes invalid");
         let ephemeral = StaticSecret::from(ephemeral_bytes);
         let ct_x = PublicKey::from(&ephemeral);
-        let ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
+        let mut ss_x = ephemeral.diffie_hellman(&self.pk_x).to_bytes();
 
-        let ct_x_bytes = ct_x.to_bytes();
-        let pk_x_bytes = self.pk_x.to_bytes();
+        let mut ct_x_bytes = ct_x.to_bytes();
+        let mut pk_x_bytes = self.pk_x.to_bytes();
 
         let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
+
+        ss_x.zeroize();
+        ct_x_bytes.zeroize();
+        pk_x_bytes.zeroize();
+        ephemeral_bytes.zeroize();
 
         (
             Ciphertext {
@@ -200,7 +209,7 @@ impl DecapsulationKey {
     }
 
     pub fn encapsulation_key(&self) -> crate::Result<EncapsulationKey> {
-        let (kp, x_bytes) = expand_seed(&self.seed);
+        let (kp, mut x_bytes) = expand_seed(&self.seed);
         let pk_m_bytes: [u8; MLKEM768_PK_SIZE] = kp
             .public_key()
             .as_ref()
@@ -208,6 +217,7 @@ impl DecapsulationKey {
             .map_err(|_| crate::Error::ArraySizeError)?;
 
         let sk_x = StaticSecret::from(x_bytes);
+        x_bytes.zeroize();
         let pk_x = PublicKey::from(&sk_x);
 
         Ok(EncapsulationKey {
@@ -217,23 +227,26 @@ impl DecapsulationKey {
     }
 
     pub fn decapsulate(&self, ct: &Ciphertext) -> Result<SharedSecret> {
-        let (kp, x_bytes) = expand_seed(&self.seed);
+        let (kp, mut x_bytes) = expand_seed(&self.seed);
 
         let sk_m = kp.private_key();
         let ct_m = MlKem768Ciphertext::from(ct.ct_m);
         let mut ss_m = decapsulate(sk_m, &ct_m);
 
         let sk_x = StaticSecret::from(x_bytes);
+        x_bytes.zeroize();
         let mut ss_x = sk_x.diffie_hellman(&ct.ct_x).to_bytes();
 
         let pk_x = PublicKey::from(&sk_x);
-        let ct_x_bytes = ct.ct_x.to_bytes();
-        let pk_x_bytes = pk_x.to_bytes();
+        let mut ct_x_bytes = ct.ct_x.to_bytes();
+        let mut pk_x_bytes = pk_x.to_bytes();
 
         let ss = combiner(&ss_m, &ss_x, &ct_x_bytes, &pk_x_bytes);
 
         ss_m.zeroize();
         ss_x.zeroize();
+        ct_x_bytes.zeroize();
+        pk_x_bytes.zeroize();
 
         Ok(ss)
     }
