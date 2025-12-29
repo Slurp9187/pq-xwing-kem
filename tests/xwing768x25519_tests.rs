@@ -1,8 +1,8 @@
-//! Unit tests for mlkem1024x448.
+//! Unit tests for xwing768.
 
-use pq_xwing_kem::mlkem1024x448::{
-    generate_keypair, Ciphertext, EncapsulationKey, XWING1024_CIPHERTEXT_SIZE,
-    XWING1024_ENCAPSULATION_KEY_SIZE,
+use pq_xwing_kem::xwing768x25519::{
+    generate_keypair, Ciphertext, EncapsulationKey, XWING768_CIPHERTEXT_SIZE,
+    XWING768_ENCAPSULATION_KEY_SIZE,
 };
 use pq_xwing_kem::Error;
 use rand_chacha::ChaCha20Rng;
@@ -13,7 +13,7 @@ fn test_generate_keypair() {
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let (_sk, pk) = generate_keypair(&mut rng).unwrap();
 
-    assert_eq!(pk.to_bytes().len(), XWING1024_ENCAPSULATION_KEY_SIZE);
+    assert_eq!(pk.to_bytes().len(), XWING768_ENCAPSULATION_KEY_SIZE);
 }
 
 #[test]
@@ -25,7 +25,7 @@ fn test_encapsulation_decapsulation_roundtrip() {
     let ss_decap = sk.decapsulate(&ct).unwrap();
 
     assert_eq!(ss_encap, ss_decap);
-    assert_eq!(ct.to_bytes().len(), XWING1024_CIPHERTEXT_SIZE);
+    assert_eq!(ct.to_bytes().len(), XWING768_CIPHERTEXT_SIZE);
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn test_wrong_key_decapsulate_fails() {
     let ss_decap = sk2.decapsulate(&ct).unwrap();
 
     // Since it's hybrid, and ML-KEM decapsulates to random if wrong key,
-    // but X448 will give different ss_x, so overall different secret.
+    // but X25519 will give different ss_x, so overall different secret.
     assert_ne!(ss_encap, ss_decap);
 }
 
@@ -108,18 +108,18 @@ fn test_ciphertext_size() {
     let mut rng = ChaCha20Rng::seed_from_u64(42);
     let (_, pk) = generate_keypair(&mut rng).unwrap();
     let (ct, _) = pk.encapsulate(&mut rng).unwrap();
-    assert_eq!(ct.to_bytes().len(), XWING1024_CIPHERTEXT_SIZE);
+    assert_eq!(ct.to_bytes().len(), XWING768_CIPHERTEXT_SIZE);
 }
 
 #[test]
-fn test_invalid_x448_public_key_validation() {
-    // Test that all-zero X448 public key is rejected
-    let mut invalid_pk_bytes = [0u8; XWING1024_ENCAPSULATION_KEY_SIZE];
-    // First 1568 bytes are ML-KEM key (leave as zeros for this test)
-    // Last 56 bytes are X448 public key - set to all zeros (invalid)
-    invalid_pk_bytes[XWING1024_ENCAPSULATION_KEY_SIZE - 56..].fill(0);
+fn test_invalid_x25519_public_key_validation() {
+    // Test that all-zero X25519 public key is rejected
+    let mut invalid_pk_bytes = [0u8; XWING768_ENCAPSULATION_KEY_SIZE];
+    // First 1184 bytes are ML-KEM key (leave as zeros for this test)
+    // Last 32 bytes are X25519 public key - set to all zeros (invalid)
+    invalid_pk_bytes[XWING768_ENCAPSULATION_KEY_SIZE - 32..].fill(0);
 
     let result = EncapsulationKey::try_from(&invalid_pk_bytes);
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), Error::InvalidX448PublicKey));
+    assert!(matches!(result.unwrap_err(), Error::InvalidX25519PublicKey));
 }

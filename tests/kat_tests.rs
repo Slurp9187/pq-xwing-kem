@@ -1,5 +1,5 @@
 // tests/kat_tests.rs
-use pq_xwing_kem::mlkem768x25519::{DecapsulationKey, EncapsulationKey};
+use pq_xwing_kem::xwing768x25519::{DecapsulationKey, EncapsulationKey};
 use serde::Deserialize;
 use std::fs;
 

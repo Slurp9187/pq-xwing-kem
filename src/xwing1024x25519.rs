@@ -24,9 +24,9 @@ const X25519_KEY_SIZE: usize = 32;
 const MLKEM1024_PK_SIZE: usize = 1568;
 pub const MLKEM1024_CT_SIZE: usize = 1568;
 
-pub const XWING1024_ENCAPSULATION_KEY_SIZE: usize = MLKEM1024_PK_SIZE + X25519_KEY_SIZE;
-pub const XWING1024_DECAPSULATION_KEY_SIZE: usize = MASTER_SEED_SIZE;
-pub const XWING1024_CIPHERTEXT_SIZE: usize = MLKEM1024_CT_SIZE + X25519_KEY_SIZE;
+pub const XWING1024X25519_ENCAPSULATION_KEY_SIZE: usize = MLKEM1024_PK_SIZE + X25519_KEY_SIZE;
+pub const XWING1024X25519_DECAPSULATION_KEY_SIZE: usize = MASTER_SEED_SIZE;
+pub const XWING1024X25519_CIPHERTEXT_SIZE: usize = MLKEM1024_CT_SIZE + X25519_KEY_SIZE;
 
 #[derive(Clone, Debug, PartialEq, Eq, ZeroizeOnDrop)]
 pub struct EncapsulationKey {
@@ -47,8 +47,8 @@ pub struct Ciphertext {
 
 impl EncapsulationKey {
     #[must_use]
-    pub fn to_bytes(&self) -> [u8; XWING1024_ENCAPSULATION_KEY_SIZE] {
-        let mut buffer = [0u8; XWING1024_ENCAPSULATION_KEY_SIZE];
+    pub fn to_bytes(&self) -> [u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE] {
+        let mut buffer = [0u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE];
         buffer[..MLKEM1024_PK_SIZE].copy_from_slice(&self.pk_m);
         buffer[MLKEM1024_PK_SIZE..].copy_from_slice(&self.pk_x.to_bytes());
         buffer
@@ -169,10 +169,10 @@ impl EncapsulationKey {
     }
 }
 
-impl TryFrom<&[u8; XWING1024_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
+impl TryFrom<&[u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE]> for EncapsulationKey {
     type Error = crate::Error;
 
-    fn try_from(bytes: &[u8; XWING1024_ENCAPSULATION_KEY_SIZE]) -> crate::Result<Self> {
+    fn try_from(bytes: &[u8; XWING1024X25519_ENCAPSULATION_KEY_SIZE]) -> crate::Result<Self> {
         let mut pk_m = [0u8; MLKEM1024_PK_SIZE];
         pk_m.copy_from_slice(&bytes[..MLKEM1024_PK_SIZE]);
 
@@ -246,8 +246,8 @@ impl DecapsulationKey {
 
 impl Ciphertext {
     #[must_use]
-    pub fn to_bytes(&self) -> [u8; XWING1024_CIPHERTEXT_SIZE] {
-        let mut buffer = [0u8; XWING1024_CIPHERTEXT_SIZE];
+    pub fn to_bytes(&self) -> [u8; XWING1024X25519_CIPHERTEXT_SIZE] {
+        let mut buffer = [0u8; XWING1024X25519_CIPHERTEXT_SIZE];
         buffer[..MLKEM1024_CT_SIZE].copy_from_slice(&self.ct_m);
         buffer[MLKEM1024_CT_SIZE..].copy_from_slice(&self.ct_x.to_bytes());
         buffer
@@ -268,10 +268,10 @@ impl Ciphertext {
     }
 }
 
-impl TryFrom<&[u8; XWING1024_CIPHERTEXT_SIZE]> for Ciphertext {
+impl TryFrom<&[u8; XWING1024X25519_CIPHERTEXT_SIZE]> for Ciphertext {
     type Error = crate::Error;
 
-    fn try_from(bytes: &[u8; XWING1024_CIPHERTEXT_SIZE]) -> crate::Result<Self> {
+    fn try_from(bytes: &[u8; XWING1024X25519_CIPHERTEXT_SIZE]) -> crate::Result<Self> {
         let mut ct_m = [0u8; MLKEM1024_CT_SIZE];
         ct_m.copy_from_slice(&bytes[..MLKEM1024_CT_SIZE]);
 
