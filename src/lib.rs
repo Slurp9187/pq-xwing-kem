@@ -30,7 +30,7 @@
 extern crate alloc;
 
 pub mod combiner;
-pub mod dh_trait;
+// pub mod dh_trait;
 pub mod error;
 pub mod xwing1024x25519;
 pub mod xwing1024x448;
