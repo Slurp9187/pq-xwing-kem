@@ -9,6 +9,8 @@ use libcrux_ml_kem::mlkem768::{
     MlKem768PublicKey,
 };
 
+use rand_core::{CryptoRng, TryRngCore}; // Updated for rand_core 0.9 fallible RNG
+
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
@@ -49,17 +51,26 @@ impl EncapsulationKey {
         buffer
     }
 
-    pub fn encapsulate<R: rand_core::RngCore + rand_core::CryptoRng>(
+    /// Random encapsulation using a caller-provided cryptographically secure RNG.
+    /// Bounds updated to the modern fallible traits in rand_core 0.9+.
+    /// RNG failures are treated as fatal (panic via .expect) — they are exceedingly rare in practice.
+    pub fn encapsulate<R: TryRngCore + CryptoRng>(
         &self,
         rng: &mut R,
     ) -> Result<(Ciphertext, SharedSecret)> {
-        // Generate ephemeral X25519 keypair using manual bytes to avoid rand_core version conflicts
+        // Generate ephemeral X25519 keypair using manual bytes (avoids pulling in dalek's RNG traits)
         let mut ephemeral_bytes = [0u8; 32];
-        rng.fill_bytes(&mut ephemeral_bytes);
+        rng.try_fill_bytes(&mut ephemeral_bytes)
+            .expect("Failed to generate random bytes for ephemeral X25519 key");
+
         let ephemeral: EphemeralSecret = unsafe { std::mem::transmute(ephemeral_bytes) };
+
         let pk_m = MlKem768PublicKey::from(self.pk_m);
+
         let mut ml_rand = [0u8; 32];
-        rng.fill_bytes(&mut ml_rand);
+        rng.try_fill_bytes(&mut ml_rand)
+            .expect("Failed to generate random bytes for ML-KEM encapsulation");
+
         let (ct_m, mut ss_m) = encapsulate(&pk_m, ml_rand);
 
         let ct_m_bytes: [u8; MLKEM768_CT_SIZE] = ct_m
@@ -219,9 +230,12 @@ impl DecapsulationKey {
         Self { seed: *seed }
     }
 
-    pub fn generate<R: rand_core::RngCore + rand_core::CryptoRng>(rng: &mut R) -> Self {
+    /// Generate a new decapsulation key using a caller-provided cryptographically secure RNG.
+    /// Updated for rand_core 0.9 fallible traits.
+    pub fn generate<R: TryRngCore + CryptoRng>(rng: &mut R) -> Self {
         let mut seed = [0u8; MASTER_SEED_SIZE];
-        rng.fill_bytes(&mut seed);
+        rng.try_fill_bytes(&mut seed)
+            .expect("Failed to generate random bytes for decapsulation key seed");
         Self { seed }
     }
 
@@ -268,6 +282,7 @@ impl DecapsulationKey {
         Ok(ss)
     }
 }
+
 impl Ciphertext {
     #[must_use]
     pub fn to_bytes(&self) -> [u8; XWING768X25519_CIPHERTEXT_SIZE] {
@@ -325,7 +340,9 @@ impl TryFrom<&[u8; XWING768X25519_CIPHERTEXT_SIZE]> for Ciphertext {
     }
 }
 
-pub fn generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
+/// Generate a fresh keypair using a caller-provided cryptographically secure RNG.
+/// Updated for rand_core 0.9 fallible traits.
+pub fn generate_keypair<R: TryRngCore + CryptoRng>(
     rng: &mut R,
 ) -> crate::Result<(DecapsulationKey, EncapsulationKey)> {
     let sk = DecapsulationKey::generate(rng);
