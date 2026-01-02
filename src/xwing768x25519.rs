@@ -9,8 +9,7 @@ use libcrux_ml_kem::mlkem768::{
     MlKem768PublicKey,
 };
 
-use rand::TryCryptoRng;
-use rand_core::TryRngCore; // Updated for rand_core 0.9 fallible RNG
+use rand::{TryCryptoRng, TryRngCore};
 
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;

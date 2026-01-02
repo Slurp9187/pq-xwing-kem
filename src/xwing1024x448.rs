@@ -14,6 +14,7 @@ use libcrux_ml_kem::mlkem1024::{
     MlKem1024PublicKey,
 };
 
+use rand::{TryCryptoRng, TryRngCore};
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::{Digest, Sha3_256, Shake256};
 use x448::{x448, X448_BASEPOINT_BYTES};
@@ -58,16 +59,18 @@ impl EncapsulationKey {
         buffer
     }
 
-    pub fn encapsulate<R: rand_core::RngCore + rand_core::CryptoRng>(
+    pub fn encapsulate<R: TryRngCore + TryCryptoRng>(
         &self,
         rng: &mut R,
     ) -> Result<(Ciphertext, SharedSecret)> {
         // Generate ephemeral X448 keypair using manual bytes to avoid rand_core version conflicts
         let mut ephemeral_bytes = [0u8; 56];
-        rng.fill_bytes(&mut ephemeral_bytes);
+        rng.try_fill_bytes(&mut ephemeral_bytes)
+            .expect("Failed to generate ephemeral random bytes");
         let pk_m = MlKem1024PublicKey::from(self.pk_m);
         let mut ml_rand = [0u8; 32];
-        rng.fill_bytes(&mut ml_rand);
+        rng.try_fill_bytes(&mut ml_rand)
+            .expect("Failed to generate ML-KEM random bytes");
         let (ct_m, mut ss_m) = encapsulate(&pk_m, ml_rand);
 
         let ct_m_bytes: [u8; MLKEM1024_CT_SIZE] = ct_m
@@ -236,9 +239,10 @@ impl DecapsulationKey {
         Self { seed: *seed }
     }
 
-    pub fn generate<R: rand_core::RngCore + rand_core::CryptoRng>(rng: &mut R) -> Self {
+    pub fn generate<R: TryRngCore + TryCryptoRng>(rng: &mut R) -> Self {
         let mut seed = [0u8; MASTER_SEED_SIZE];
-        rng.fill_bytes(&mut seed);
+        rng.try_fill_bytes(&mut seed)
+            .expect("Failed to generate master seed");
         Self { seed }
     }
 
@@ -346,7 +350,7 @@ impl TryFrom<&[u8; XWING1024X448_CIPHERTEXT_SIZE]> for Ciphertext {
     }
 }
 
-pub fn generate_keypair<R: rand_core::RngCore + rand_core::CryptoRng>(
+pub fn generate_keypair<R: TryRngCore + TryCryptoRng>(
     rng: &mut R,
 ) -> crate::Result<(DecapsulationKey, EncapsulationKey)> {
     let sk = DecapsulationKey::generate(rng);
