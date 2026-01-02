@@ -10,7 +10,7 @@ use libcrux_ml_kem::mlkem768::{
 };
 
 use rand::TryCryptoRng;
-use rand_core::{CryptoRng, TryRngCore}; // Updated for rand_core 0.9 fallible RNG
+use rand_core::TryRngCore; // Updated for rand_core 0.9 fallible RNG
 
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
@@ -233,7 +233,7 @@ impl DecapsulationKey {
 
     /// Generate a new decapsulation key using a caller-provided cryptographically secure RNG.
     /// Updated for rand_core 0.9 fallible traits.
-    pub fn generate<R: TryRngCore + CryptoRng>(rng: &mut R) -> Self {
+    pub fn generate<R: TryRngCore + TryCryptoRng>(rng: &mut R) -> Self {
         let mut seed = [0u8; MASTER_SEED_SIZE];
         rng.try_fill_bytes(&mut seed)
             .expect("Failed to generate random bytes for decapsulation key seed");
@@ -343,7 +343,7 @@ impl TryFrom<&[u8; XWING768X25519_CIPHERTEXT_SIZE]> for Ciphertext {
 
 /// Generate a fresh keypair using a caller-provided cryptographically secure RNG.
 /// Updated for rand_core 0.9 fallible traits.
-pub fn generate_keypair<R: TryRngCore + CryptoRng>(
+pub fn generate_keypair<R: TryRngCore + TryCryptoRng>(
     rng: &mut R,
 ) -> crate::Result<(DecapsulationKey, EncapsulationKey)> {
     let sk = DecapsulationKey::generate(rng);
