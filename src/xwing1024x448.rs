@@ -85,12 +85,7 @@ impl EncapsulationKey {
         let mut ct_x_reduced = hash_to_32(&ct_x);
         let mut pk_x_reduced = hash_to_32(&self.pk_x);
         let mut ss_x = Sha3_256::digest(ss_x_full);
-        let ss = combiner(
-            &ss_m,
-            &ss_x.into(),
-            &ct_x_reduced,
-            &pk_x_reduced,
-        );
+        let ss = combiner(&ss_m, &ss_x.into(), &ct_x_reduced, &pk_x_reduced);
 
         ss_m.zeroize();
         ss_x.zeroize();
@@ -171,12 +166,7 @@ impl EncapsulationKey {
         let mut pk_x_reduced = Sha3_256::digest(self.pk_x);
         let mut ss_x = hash_to_32(&ss_x_full);
 
-        let ss = combiner(
-            &ss_m,
-            &ss_x,
-            &ct_x_reduced.into(),
-            &pk_x_reduced.into(),
-        );
+        let ss = combiner(&ss_m, &ss_x, &ct_x_reduced.into(), &pk_x_reduced.into());
 
         ss_x.zeroize();
         ct_x_reduced.zeroize();
@@ -284,12 +274,7 @@ impl DecapsulationKey {
         let mut pk_x_reduced = hash_to_32(&pk_x);
         let mut ss_x = hash_to_32(&ss_x_full);
 
-        let ss = combiner(
-            &ss_m,
-            &ss_x,
-            &ct_x_reduced,
-            &pk_x_reduced,
-        );
+        let ss = combiner(&ss_m, &ss_x, &ct_x_reduced, &pk_x_reduced);
 
         ss_m.zeroize();
         ss_x.zeroize();
