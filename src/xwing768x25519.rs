@@ -9,6 +9,7 @@ use libcrux_ml_kem::mlkem768::{
     MlKem768PublicKey,
 };
 
+use rand::TryCryptoRng;
 use rand_core::{CryptoRng, TryRngCore}; // Updated for rand_core 0.9 fallible RNG
 
 use sha3::digest::{ExtendableOutput, Update, XofReader};
@@ -54,7 +55,7 @@ impl EncapsulationKey {
     /// Random encapsulation using a caller-provided cryptographically secure RNG.
     /// Bounds updated to the modern fallible traits in rand_core 0.9+.
     /// RNG failures are treated as fatal (panic via .expect) — they are exceedingly rare in practice.
-    pub fn encapsulate<R: TryRngCore + CryptoRng>(
+    pub fn encapsulate<R: TryRngCore + TryCryptoRng>(
         &self,
         rng: &mut R,
     ) -> Result<(Ciphertext, SharedSecret)> {

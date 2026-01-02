@@ -20,6 +20,7 @@ x448 = "0.6.0"
 
 zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
 thiserror = "2.0"
+rand = "0.9"
 
 [dev-dependencies]
 hex = { version = "0.4", features = ["serde"] }
