@@ -60,7 +60,7 @@ impl EncapsulationKey {
         &self,
         rng: &mut R,
     ) -> Result<(Ciphertext, SharedSecret)> {
-        // Generate ephemeral X25519 keypair using manual bytes to avoid rand_core version conflicts
+        // Generate ephemeral X25519 keypair using manual bytes
         let mut ephemeral_bytes = [0u8; 32];
         rng.try_fill_bytes(&mut ephemeral_bytes)
             .expect("Failed to generate ephemeral random bytes");

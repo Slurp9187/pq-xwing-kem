@@ -52,13 +52,11 @@ impl EncapsulationKey {
     }
 
     /// Random encapsulation using a caller-provided cryptographically secure RNG.
-    /// Bounds updated to the modern fallible traits in rand_core 0.9+.
-    /// RNG failures are treated as fatal (panic via .expect) — they are exceedingly rare in practice.
     pub fn encapsulate<R: TryRngCore + TryCryptoRng>(
         &self,
         rng: &mut R,
     ) -> Result<(Ciphertext, SharedSecret)> {
-        // Generate ephemeral X25519 keypair using manual bytes (avoids pulling in dalek's RNG traits)
+        // Generate ephemeral X25519 keypair using manual bytes
         let mut ephemeral_bytes = [0u8; 32];
         rng.try_fill_bytes(&mut ephemeral_bytes)
             .expect("Failed to generate random bytes for ephemeral X25519 key");
@@ -231,7 +229,6 @@ impl DecapsulationKey {
     }
 
     /// Generate a new decapsulation key using a caller-provided cryptographically secure RNG.
-    /// Updated for rand_core 0.9 fallible traits.
     pub fn generate<R: TryRngCore + TryCryptoRng>(rng: &mut R) -> Self {
         let mut seed = [0u8; MASTER_SEED_SIZE];
         rng.try_fill_bytes(&mut seed)
@@ -341,7 +338,6 @@ impl TryFrom<&[u8; XWING768X25519_CIPHERTEXT_SIZE]> for Ciphertext {
 }
 
 /// Generate a fresh keypair using a caller-provided cryptographically secure RNG.
-/// Updated for rand_core 0.9 fallible traits.
 pub fn generate_keypair<R: TryRngCore + TryCryptoRng>(
     rng: &mut R,
 ) -> crate::Result<(DecapsulationKey, EncapsulationKey)> {
